@@ -89,11 +89,14 @@ class Dumper:
         )
         return process.communicate()[0]
 
-    def dump(self, filename, full_tables):
+    def dump(self, filename, full_tables=None, partial_tables=None):
+        full_tables = full_tables or ()
+        partial_tables = partial_tables or {}
         with Dump(filename, 'w', zipfile.ZIP_DEFLATED) as file:
             self.write_schema(file)
             self.write_sequences(file)
             self.write_full_tables(file, full_tables)
+            self.write_partial_tables(file, partial_tables)
 
     def write_schema(self, file):
         """
@@ -136,10 +139,17 @@ class Dumper:
         sequences = self.dump_sequences()
         file.writestr('dump/sequences.sql', sequences)
 
+    def write_csv(self, file, table_name, sql):
+        data = self.export_to_csv(sql)
+        file.write_data(table_name, data)
+
     def write_full_tables(self, file, tables):
         """
         Writes a complete tables dump in CSV format to the archive.
         """
         for table_name in tables:
-            data = self.export_to_csv(f'SELECT * FROM {table_name}')
-            file.write_data(table_name, data)
+            self.write_csv(file, table_name, f'SELECT * FROM {table_name}')
+
+    def write_partial_tables(self, file, config):
+        for table_name, sql in config.items():
+            self.write_csv(file, table_name, sql)

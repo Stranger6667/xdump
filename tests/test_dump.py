@@ -6,7 +6,25 @@ import pytest
 from concopy.dump import Dump
 
 
-pytestmark = pytest.mark.usefixtures('setup_database')
+pytestmark = pytest.mark.usefixtures('schema')
+
+
+EMPLOYEES_SQL = '''
+WITH RECURSIVE employees_cte AS (
+  SELECT * 
+  FROM recent_employees
+  UNION
+  SELECT E.*
+  FROM employees E
+  INNER JOIN employees_cte ON (employees_cte.manager_id = E.id)
+), recent_employees AS (
+  SELECT * 
+  FROM employees
+  ORDER BY id DESC
+  LIMIT 2
+)
+SELECT * FROM employees_cte
+'''
 
 
 def assert_schema(schema, dumper):
@@ -94,10 +112,13 @@ class TestDump:
         assert 'PGPASSWORD' not in dumper.pg_dump_environment
 
     def test_dump(self, dumper, archive_filename):
-        dumper.dump(archive_filename, ['groups'])
+        dumper.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL})
         archive = zipfile.ZipFile(archive_filename)
-        assert archive.namelist() == ['dump/schema.sql', 'dump/sequences.sql', 'dump/data/groups.csv']
+        assert archive.namelist() == [
+            'dump/schema.sql', 'dump/sequences.sql', 'dump/data/groups.csv', 'dump/data/employees.csv',
+        ]
         assert archive.read('dump/data/groups.csv') == b'id,name\n'
+        assert archive.read('dump/data/employees.csv') == b'id,first_name,last_name,manager_id,group_id\n'
         assert "SELECT pg_catalog.setval('groups_id_seq', 1, false);".encode() in archive.read('dump/sequences.sql')
         schema = archive.read('dump/schema.sql')
         assert_schema(schema, dumper)
@@ -115,3 +136,17 @@ class TestDump:
             dumper.dump(archive_filename, ['employees', 'groups'])
             archive = zipfile.ZipFile(archive_filename)
             assert archive.read('dump/data/groups.csv') == b'id,name\n'
+
+    @pytest.mark.usefixtures('schema', 'data')
+    def test_write_partial_tables(self, dumper, archive):
+        """
+        Here we need to select two latest employees with all related managers.
+        In that case - John Black will not be in the output.
+        """
+
+        dumper.write_partial_tables(archive, {'employees': EMPLOYEES_SQL})
+        assert archive.read('dump/data/employees.csv') == b'id,first_name,last_name,manager_id,group_id\n' \
+                                                          b'5,John,Snow,3,2\n' \
+                                                          b'4,John,Brown,3,2\n' \
+                                                          b'3,John,Smith,1,1\n' \
+                                                          b'1,John,Doe,,1\n'

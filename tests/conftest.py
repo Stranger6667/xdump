@@ -15,11 +15,20 @@ def cursor(postgresql):
     return postgresql.cursor()
 
 
-@pytest.fixture
-def setup_database(cursor):
-    with (CURRENT_DIR / 'schema.sql').open('r') as fd:
+def execute_file(cursor, filename):
+    with (CURRENT_DIR / filename).open('r') as fd:
         sql = fd.read()
     cursor.execute(sql)
+
+
+@pytest.fixture
+def schema(cursor):
+    execute_file(cursor, 'schema.sql')
+
+
+@pytest.fixture
+def data(cursor):
+    execute_file(cursor, 'data.sql')
 
 
 @pytest.fixture
