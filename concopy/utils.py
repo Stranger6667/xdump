@@ -1,12 +1,9 @@
 # coding: utf-8
+import itertools
 
 
-def flatten(container):
-    return sum(container, ())
-
-
-def make_options(container, option_key):
+def make_options(option_key, container):
     """
     Creates a list of options from the given list of values.
     """
-    return flatten([(option_key, value) for value in container])
+    return itertools.chain.from_iterable([(option_key, value) for value in container])

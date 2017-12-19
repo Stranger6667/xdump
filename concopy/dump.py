@@ -4,7 +4,10 @@ import subprocess
 import zipfile
 from io import BytesIO
 
+import attr
 import psycopg2
+from cached_property import cached_property
+from psycopg2.extras import RealDictConnection
 
 from .utils import make_options
 
@@ -12,14 +15,13 @@ from .utils import make_options
 SELECTABLE_TABLES_SQL = '''
 SELECT table_name
 FROM information_schema.tables
-WHERE 
-    table_schema NOT IN ('pg_catalog', 'information_schema') AND 
+WHERE
+    table_schema NOT IN ('pg_catalog', 'information_schema') AND
     table_schema NOT LIKE 'pg_toast%'
 '''
 SEQUENCES_SQL = '''
 SELECT relname FROM pg_class WHERE relkind = 'S'
 '''
-FULL_TABLES = ()
 
 
 class Dump(zipfile.ZipFile):
@@ -28,42 +30,46 @@ class Dump(zipfile.ZipFile):
         self.writestr(f'dump/data/{table_name}.csv', data)
 
 
+@attr.s
 class Dumper:
+    dbname = attr.ib()
+    user = attr.ib()
+    password = attr.ib(default=None)
+    host = attr.ib(default='127.0.0.1')
+    port = attr.ib(default=5432)
 
-    def __init__(self, dbname, user, password, host, port):
-        self.dbname = dbname
-        self.user = user
-        self.password = password
-        self.host = host
-        self.port = port
-
-    @property
+    @cached_property
     def connection(self):
-        if not hasattr(self, '_connection'):
-            self._connection = psycopg2.connect(
-                dbname=self.dbname,
-                user=self.user,
-                password=self.password,
-                host=self.host,
-                port=self.port,
-                connection_factory=psycopg2.extras.RealDictConnection
-            )
-        return self._connection
+        return psycopg2.connect(
+            dbname=self.dbname,
+            user=self.user,
+            password=self.password,
+            host=self.host,
+            port=self.port,
+            connection_factory=RealDictConnection
+        )
 
-    @property
+    @cached_property
     def cursor(self):
-        if not hasattr(self, '_cursor'):
-            self._cursor = self.connection.cursor()
-        return self._cursor
+        return self.connection.cursor()
 
     def run(self, sql):
         self.cursor.execute(sql)
         return self.cursor.fetchall()
 
-    def copy_to_stdout(self, sql):
+    def export_to_csv(self, sql):
+        """
+        Exports the result of the given sql to CSV with a help of COPY statement.
+        """
         with BytesIO() as output:
             self.cursor.copy_expert(f'COPY ({sql}) TO STDOUT WITH CSV HEADER', output)
             return output.getvalue()
+
+    @property
+    def pg_dump_environment(self):
+        if self.password:
+            return {**os.environ, 'PGPASSWORD': self.password}
+        return os.environ.copy()
 
     def pg_dump(self, *args):
         process = subprocess.Popen(
@@ -76,7 +82,7 @@ class Dumper:
                 *args,
             ],
             stdout=subprocess.PIPE,
-            env={**os.environ, 'PGPASSWORD': self.password},
+            env=self.pg_dump_environment
         )
         return process.communicate()[0]
 
@@ -84,7 +90,7 @@ class Dumper:
         with Dump(filename, 'w', zipfile.ZIP_DEFLATED) as file:
             self.write_schema(file)
             self.write_sequences(file)
-            self.write_full_tables(file)
+            self.write_full_tables(file, full_tables)
 
     def write_schema(self, file):
         """
@@ -120,17 +126,17 @@ class Dumper:
         sequences = self.get_sequences()
         return self.pg_dump(
             '-a',  # Data-only
-            *make_options(sequences, '-t')
+            *make_options('-t', sequences)
         )
 
     def write_sequences(self, file):
         sequences = self.dump_sequences()
         file.writestr('dump/sequences.sql', sequences)
 
-    def write_full_tables(self, file):
+    def write_full_tables(self, file, tables):
         """
         Writes a complete tables dump in CSV format to the archive.
         """
-        for table_name in FULL_TABLES:
-            data = self.copy_to_stdout(f'SELECT * FROM {table_name}')
+        for table_name in tables:
+            data = self.export_to_csv(f'SELECT * FROM {table_name}')
             file.write_data(table_name, data)
