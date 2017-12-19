@@ -1,4 +1,5 @@
 import zipfile
+from unittest.mock import patch
 
 import pytest
 
@@ -100,3 +101,17 @@ class TestDump:
         assert "SELECT pg_catalog.setval('groups_id_seq', 1, false);".encode() in archive.read('dump/sequences.sql')
         schema = archive.read('dump/schema.sql')
         assert_schema(schema, dumper)
+
+    def test_transaction(self, dumper, cursor, archive_filename):
+        is_added = False
+
+        def add_group(*args, **kwargs):
+            nonlocal is_added
+            if not is_added:
+                cursor.execute('INSERT INTO groups (name) VALUES (\'test\')')
+                is_added = True
+
+        with patch.object(dumper, 'export_to_csv', wraps=dumper.export_to_csv, side_effect=add_group):
+            dumper.dump(archive_filename, ['employees', 'groups'])
+            archive = zipfile.ZipFile(archive_filename)
+            assert archive.read('dump/data/groups.csv') == b'id,name\n'
