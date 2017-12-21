@@ -3,8 +3,6 @@ from unittest.mock import patch
 
 import pytest
 
-from xdump.dump import Dump
-
 
 pytestmark = pytest.mark.usefixtures('schema')
 
@@ -87,7 +85,7 @@ class TestDump:
 
     @pytest.fixture
     def archive(self, archive_filename):
-        with Dump(archive_filename, 'w', zipfile.ZIP_DEFLATED) as file:
+        with zipfile.ZipFile(archive_filename, 'w', zipfile.ZIP_DEFLATED) as file:
             yield file
 
     def test_write_schema(self, dumper, archive):
