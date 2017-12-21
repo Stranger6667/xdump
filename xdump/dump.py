@@ -25,12 +25,6 @@ SELECT relname FROM pg_class WHERE relkind = 'S'
 '''
 
 
-class Dump(zipfile.ZipFile):
-
-    def write_data(self, table_name, data):
-        self.writestr(f'dump/data/{table_name}.csv', data)
-
-
 @attr.s
 class Dumper:
     dbname = attr.ib()
@@ -92,7 +86,7 @@ class Dumper:
     def dump(self, filename, full_tables=None, partial_tables=None):
         full_tables = full_tables or ()
         partial_tables = partial_tables or {}
-        with Dump(filename, 'w', zipfile.ZIP_DEFLATED) as file:
+        with zipfile.ZipFile(filename, 'w', zipfile.ZIP_DEFLATED) as file:
             self.write_schema(file)
             self.write_sequences(file)
             self.write_full_tables(file, full_tables)
@@ -141,7 +135,7 @@ class Dumper:
 
     def write_csv(self, file, table_name, sql):
         data = self.export_to_csv(sql)
-        file.write_data(table_name, data)
+        file.writestr(f'dump/data/{table_name}.csv', data)
 
     def write_full_tables(self, file, tables):
         """
