@@ -1,7 +1,7 @@
 # coding: utf-8
 from setuptools import setup
 
-import concopy
+import xdump
 
 
 with open('README.rst') as file:
@@ -9,17 +9,17 @@ with open('README.rst') as file:
 
 
 setup(
-    name='concopy',
-    url='https://github.com/Stranger6667/concopy',
-    version=concopy.__version__,
-    packages=['concopy'],
+    name='xdump',
+    url='https://github.com/Stranger6667/xdump',
+    version=xdump.__version__,
+    packages=['xdump'],
     license='MIT',
     author='Dmitry Dygalo',
     author_email='dadygalo@gmail.com',
     maintainer='Dmitry Dygalo',
     maintainer_email='dadygalo@gmail.com',
-    keywords=['database', 'copy', 'postgresql'],
-    description='Consistent partial database copy utility',
+    keywords=['database', 'dump', 'postgresql'],
+    description='Consistent partial database dump utility',
     long_description=long_description,
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',

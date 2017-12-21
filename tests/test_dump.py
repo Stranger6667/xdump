@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from concopy.dump import Dump
+from xdump.dump import Dump
 
 
 pytestmark = pytest.mark.usefixtures('schema')

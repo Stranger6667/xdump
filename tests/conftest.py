@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-from concopy.dump import Dumper
+from xdump.dump import Dumper
 
 
 CURRENT_DIR = Path(__file__).parent.absolute()
