@@ -193,5 +193,5 @@ class TestLoad:
         assert result[0]['last_value'] == 2
 
     def test_load(self, dumper, archive):
-        dumper.load(archive)
+        dumper.load(archive.filename)
         assert dumper.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]

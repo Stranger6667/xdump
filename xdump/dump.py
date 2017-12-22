@@ -200,7 +200,8 @@ class Dumper:
     def create_database(self, dbname, owner):
         self.run(f"CREATE DATABASE {dbname} WITH OWNER {owner}", using='maintenance')
 
-    def load(self, archive):
+    def load(self, filename):
+        archive = zipfile.ZipFile(filename)
         self.initial_setup(archive)
         self.load_data(archive)
 
