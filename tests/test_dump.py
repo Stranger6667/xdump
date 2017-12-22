@@ -77,11 +77,12 @@ def test_export_to_csv(dumper, cursor, sql, expected):
     assert dumper.export_to_csv('SELECT * FROM groups') == expected
 
 
-class TestDump:
+@pytest.fixture
+def archive_filename(tmpdir):
+    return str(tmpdir.join('dump.zip'))
 
-    @pytest.fixture
-    def archive_filename(self, tmpdir):
-        return str(tmpdir.join('dump.zip'))
+
+class TestDump:
 
     @pytest.fixture
     def archive(self, archive_filename):
@@ -148,3 +149,49 @@ class TestDump:
                                                           b'4,John,Brown,3,2\n' \
                                                           b'3,John,Smith,1,1\n' \
                                                           b'1,John,Doe,,1\n'
+
+
+class TestRecreating:
+
+    def is_database_exists(self, dumper, dbname):
+        return dumper.run(
+            'SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = %s)', [dbname]
+        )[0]['exists']
+
+    def test_drop_database(self, dumper):
+        original_dbname = dumper.dbname
+        dumper.dbname = 'postgres'
+        dumper.drop_connections(original_dbname)
+        dumper.drop_database(original_dbname)
+        assert not self.is_database_exists(dumper, original_dbname)
+
+    def test_create_database(self, dumper):
+        dbname = 'test_xxx'
+        dumper.create_database(dbname, dumper.user)
+        assert self.is_database_exists(dumper, dbname)
+
+    @pytest.mark.usefixtures('schema', 'data')
+    def test_recreate_database(self, dumper):
+        dumper.recreate_database(dumper.dbname, dumper.user)
+        assert self.is_database_exists(dumper, dumper.dbname)
+
+
+@pytest.mark.usefixtures('schema', 'data')
+class TestLoad:
+
+    @pytest.fixture
+    def archive(self, dumper, archive_filename):
+        dumper.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL})
+        dumper.recreate_database(dumper.dbname, dumper.user)
+        return zipfile.ZipFile(archive_filename)
+
+    def test_initial_setup(self, dumper, archive):
+        dumper.initial_setup(archive)
+        result = dumper.run("SELECT COUNT(*) FROM pg_tables WHERE tablename IN ('groups', 'employees', 'tickets')")
+        assert result[0]['count'] == 3
+        result = dumper.run("SELECT last_value FROM pg_sequences WHERE sequencename = 'groups_id_seq'")
+        assert result[0]['last_value'] == 2
+
+    def test_load(self, dumper, archive):
+        dumper.load(archive)
+        assert dumper.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]

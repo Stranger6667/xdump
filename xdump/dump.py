@@ -3,11 +3,12 @@ import os
 import subprocess
 import zipfile
 from io import BytesIO
+from pathlib import Path
 
 import attr
 import psycopg2
 from cached_property import cached_property
-from psycopg2.extensions import ISOLATION_LEVEL_REPEATABLE_READ
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT, ISOLATION_LEVEL_REPEATABLE_READ
 from psycopg2.extras import RealDictConnection
 
 from .utils import make_options
@@ -24,6 +25,25 @@ SEQUENCES_SQL = '''
 SELECT relname FROM pg_class WHERE relkind = 'S'
 '''
 
+SCHEMA_FILENAME = 'dump/schema.sql'
+SEQUENCES_FILENAME = 'dump/sequences.sql'
+DATA_DIR = 'dump/data/'
+
+
+def auto_reconnect(func):
+
+    def wrapper(self, *args, **kwargs):
+        try:
+            return func(self, *args, **kwargs)
+        except psycopg2.OperationalError as exc:
+            if str(exc).startswith('terminating connection due to administrator command'):
+                del self.connection
+                del self.cursor
+                return func(self, *args, **kwargs)
+            raise
+
+    return wrapper
+
 
 @attr.s
 class Dumper:
@@ -35,24 +55,42 @@ class Dumper:
 
     @cached_property
     def connection(self):
-        connection = psycopg2.connect(
-            dbname=self.dbname,
-            user=self.user,
-            password=self.password,
-            host=self.host,
-            port=self.port,
-            connection_factory=RealDictConnection
-        )
-        connection.set_isolation_level(ISOLATION_LEVEL_REPEATABLE_READ)
-        return connection
+        return self.connect(ISOLATION_LEVEL_REPEATABLE_READ)
+
+    @cached_property
+    def maintenance_connection(self):
+        return self.connect(ISOLATION_LEVEL_AUTOCOMMIT, dbname='postgres')
 
     @cached_property
     def cursor(self):
         return self.connection.cursor()
 
-    def run(self, sql, params=None):
-        self.cursor.execute(sql, params)
-        return self.cursor.fetchall()
+    @cached_property
+    def maintenance_cursor(self):
+        return self.maintenance_connection.cursor()
+
+    def get_cursor(self, alias='default'):
+        if alias == 'default':
+            return self.cursor
+        elif alias == 'maintenance':
+            return self.maintenance_cursor
+        raise ValueError
+
+    def connect(self, isolation_level, **kwargs):
+        for option in ('dbname', 'user', 'password', 'host', 'port'):
+            kwargs.setdefault(option, getattr(self, option))
+        connection = psycopg2.connect(connection_factory=RealDictConnection, **kwargs)
+        connection.set_isolation_level(isolation_level)
+        return connection
+
+    @auto_reconnect
+    def run(self, sql, params=None, using='default'):
+        cursor = self.get_cursor(using)
+        cursor.execute(sql, params)
+        try:
+            return cursor.fetchall()
+        except psycopg2.ProgrammingError:
+            pass
 
     def export_to_csv(self, sql):
         """
@@ -97,7 +135,7 @@ class Dumper:
         Writes a DB schema, functions, etc to the archive.
         """
         schema = self.dump_schema()
-        file.writestr('dump/schema.sql', schema)
+        file.writestr(SCHEMA_FILENAME, schema)
 
     def get_selectable_tables(self):
         """
@@ -131,11 +169,11 @@ class Dumper:
 
     def write_sequences(self, file):
         sequences = self.dump_sequences()
-        file.writestr('dump/sequences.sql', sequences)
+        file.writestr(SEQUENCES_FILENAME, sequences)
 
     def write_csv(self, file, table_name, sql):
         data = self.export_to_csv(sql)
-        file.writestr(f'dump/data/{table_name}.csv', data)
+        file.writestr(f'{DATA_DIR}{table_name}.csv', data)
 
     def write_full_tables(self, file, tables):
         """
@@ -147,3 +185,44 @@ class Dumper:
     def write_partial_tables(self, file, config):
         for table_name, sql in config.items():
             self.write_csv(file, table_name, sql)
+
+    def recreate_database(self, dbname, owner):
+        self.drop_connections(dbname)
+        self.drop_database(dbname)
+        self.create_database(dbname, owner)
+
+    def drop_connections(self, dbname):
+        self.run('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s', [dbname], 'maintenance')
+
+    def drop_database(self, dbname):
+        self.run(f'DROP DATABASE IF EXISTS {dbname}', using='maintenance')
+
+    def create_database(self, dbname, owner):
+        self.run(f"CREATE DATABASE {dbname} WITH OWNER {owner}", using='maintenance')
+
+    def load(self, archive):
+        self.initial_setup(archive)
+        self.load_data(archive)
+
+    def run_archive_file(self, archive, filename):
+        sql = archive.read(filename)
+        self.run(sql)
+
+    def initial_setup(self, archive):
+        self.load_schema(archive)
+        self.load_sequences(archive)
+
+    def load_schema(self, archive):
+        self.run_archive_file(archive, SCHEMA_FILENAME)
+
+    def load_sequences(self, archive):
+        self.run_archive_file(archive, SEQUENCES_FILENAME)
+
+    def load_data(self, archive):
+        self.run('BEGIN')
+        for name in archive.namelist():
+            if name.startswith(DATA_DIR):
+                fp = archive.open(name)
+                filename = Path(name).stem
+                self.cursor.copy_expert(f'COPY {filename} FROM STDIN WITH CSV HEADER', fp)
+        self.run('COMMIT')
