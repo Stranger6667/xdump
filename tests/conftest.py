@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-from xdump.dump import Dumper
+from xdump.core import DatabaseWrapper
 
 
 CURRENT_DIR = Path(__file__).parent.absolute()
@@ -32,9 +32,9 @@ def data(cursor):
 
 
 @pytest.fixture
-def dumper(postgresql):
+def db_wrapper(postgresql):
     parameters = postgresql.get_dsn_parameters()
-    return Dumper(
+    return DatabaseWrapper(
         dbname=parameters['dbname'],
         user=parameters['user'],
         host=parameters['host'],

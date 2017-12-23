@@ -32,7 +32,7 @@ DATA_DIR = 'dump/data/'
 
 
 @attr.s(cmp=False)
-class Dumper:
+class DatabaseWrapper:
     dbname = attr.ib()
     user = attr.ib()
     password = attr.ib(default=None)
