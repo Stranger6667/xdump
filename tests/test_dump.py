@@ -153,6 +153,12 @@ class TestDump:
 
 class TestRecreating:
 
+    @pytest.fixture
+    def archive(self, dumper, archive_filename):
+        dumper.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL})
+        dumper.recreate_database()
+        return zipfile.ZipFile(archive_filename)
+
     def is_database_exists(self, dumper, dbname):
         return dumper.run(
             'SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = %s)', [dbname]
@@ -172,26 +178,14 @@ class TestRecreating:
 
     @pytest.mark.usefixtures('schema', 'data')
     def test_recreate_database(self, dumper):
-        dumper.recreate_database(dumper.dbname, dumper.user)
+        dumper.recreate_database()
         assert self.is_database_exists(dumper, dumper.dbname)
 
-
-@pytest.mark.usefixtures('schema', 'data')
-class TestLoad:
-
-    @pytest.fixture
-    def archive(self, dumper, archive_filename):
-        dumper.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL})
-        dumper.recreate_database(dumper.dbname, dumper.user)
-        return zipfile.ZipFile(archive_filename)
-
-    def test_initial_setup(self, dumper, archive):
-        dumper.initial_setup(archive)
+    @pytest.mark.usefixtures('schema', 'data')
+    def test_populate_database(self, dumper, archive):
+        dumper.populate_database(archive.filename)
         result = dumper.run("SELECT COUNT(*) FROM pg_tables WHERE tablename IN ('groups', 'employees', 'tickets')")
         assert result[0]['count'] == 3
         result = dumper.run("SELECT last_value FROM pg_sequences WHERE sequencename = 'groups_id_seq'")
         assert result[0]['last_value'] == 2
-
-    def test_load(self, dumper, archive):
-        dumper.load(archive.filename)
         assert dumper.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]

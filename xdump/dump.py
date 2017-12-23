@@ -2,12 +2,13 @@
 import os
 import subprocess
 import zipfile
+from contextlib import contextmanager
+from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
 
 import attr
 import psycopg2
-from cached_property import cached_property
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT, ISOLATION_LEVEL_REPEATABLE_READ
 from psycopg2.extras import RealDictConnection
 
@@ -30,51 +31,30 @@ SEQUENCES_FILENAME = 'dump/sequences.sql'
 DATA_DIR = 'dump/data/'
 
 
-def auto_reconnect(func):
-
-    def wrapper(self, *args, **kwargs):
-        try:
-            return func(self, *args, **kwargs)
-        except psycopg2.OperationalError as exc:
-            if str(exc).startswith('terminating connection due to administrator command'):
-                del self.connection
-                del self.cursor
-                return func(self, *args, **kwargs)
-            raise
-
-    return wrapper
-
-
-@attr.s
+@attr.s(cmp=False)
 class Dumper:
     dbname = attr.ib()
     user = attr.ib()
     password = attr.ib(default=None)
     host = attr.ib(default='127.0.0.1')
     port = attr.ib(default=5432)
+    connections = {
+        'default': {
+            'isolation_level': ISOLATION_LEVEL_REPEATABLE_READ,
+        },
+        'maintenance': {
+            'dbname': 'postgres',
+            'isolation_level': ISOLATION_LEVEL_AUTOCOMMIT,
+        }
+    }
 
-    @cached_property
-    def connection(self):
-        return self.connect(ISOLATION_LEVEL_REPEATABLE_READ)
+    @lru_cache()
+    def get_connection(self, name='default'):
+        return self.connect(**self.connections[name])
 
-    @cached_property
-    def maintenance_connection(self):
-        return self.connect(ISOLATION_LEVEL_AUTOCOMMIT, dbname='postgres')
-
-    @cached_property
-    def cursor(self):
-        return self.connection.cursor()
-
-    @cached_property
-    def maintenance_cursor(self):
-        return self.maintenance_connection.cursor()
-
-    def get_cursor(self, alias='default'):
-        if alias == 'default':
-            return self.cursor
-        elif alias == 'maintenance':
-            return self.maintenance_cursor
-        raise ValueError
+    @lru_cache()
+    def get_cursor(self, name='default'):
+        return self.get_connection(name).cursor()
 
     def connect(self, isolation_level, **kwargs):
         for option in ('dbname', 'user', 'password', 'host', 'port'):
@@ -83,7 +63,6 @@ class Dumper:
         connection.set_isolation_level(isolation_level)
         return connection
 
-    @auto_reconnect
     def run(self, sql, params=None, using='default'):
         cursor = self.get_cursor(using)
         cursor.execute(sql, params)
@@ -92,12 +71,16 @@ class Dumper:
         except psycopg2.ProgrammingError:
             pass
 
+    def copy_expert(self, *args, **kwargs):
+        cursor = self.get_cursor()
+        return cursor.copy_expert(*args, **kwargs)
+
     def export_to_csv(self, sql):
         """
         Exports the result of the given sql to CSV with a help of COPY statement.
         """
         with BytesIO() as output:
-            self.cursor.copy_expert(f'COPY ({sql}) TO STDOUT WITH CSV HEADER', output)
+            self.copy_expert(f'COPY ({sql}) TO STDOUT WITH CSV HEADER', output)
             return output.getvalue()
 
     @property
@@ -122,6 +105,9 @@ class Dumper:
         return process.communicate()[0]
 
     def dump(self, filename, full_tables=None, partial_tables=None):
+        """
+        Creates a dump, which could be used to restore the database.
+        """
         full_tables = full_tables or ()
         partial_tables = partial_tables or {}
         with zipfile.ZipFile(filename, 'w', zipfile.ZIP_DEFLATED) as file:
@@ -186,10 +172,22 @@ class Dumper:
         for table_name, sql in config.items():
             self.write_csv(file, table_name, sql)
 
-    def recreate_database(self, dbname, owner):
-        self.drop_connections(dbname)
-        self.drop_database(dbname)
-        self.create_database(dbname, owner)
+    def populate_database(self, filename):
+        """
+        Recreates the database with data from the archive.
+        """
+        self.recreate_database()
+        self.load(filename)
+
+    def recreate_database(self):
+        """
+        Drops all connections to the database, drops the database and creates it again.
+        """
+        self.drop_connections(self.dbname)
+        self.drop_database(self.dbname)
+        self.create_database(self.dbname, self.user)
+        self.get_cursor.cache_clear()
+        self.get_connection.cache_clear()
 
     def drop_connections(self, dbname):
         self.run('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s', [dbname], 'maintenance')
@@ -201,29 +199,37 @@ class Dumper:
         self.run(f"CREATE DATABASE {dbname} WITH OWNER {owner}", using='maintenance')
 
     def load(self, filename):
+        """
+        Loads schema, sequences and data into the database.
+        """
         archive = zipfile.ZipFile(filename)
         self.initial_setup(archive)
         self.load_data(archive)
 
-    def run_archive_file(self, archive, filename):
-        sql = archive.read(filename)
-        self.run(sql)
-
     def initial_setup(self, archive):
-        self.load_schema(archive)
-        self.load_sequences(archive)
+        """
+        Loads schema and sequences SQL.
+        """
+        for filename in (SCHEMA_FILENAME, SEQUENCES_FILENAME):
+            sql = archive.read(filename)
+            self.run(sql)
 
-    def load_schema(self, archive):
-        self.run_archive_file(archive, SCHEMA_FILENAME)
-
-    def load_sequences(self, archive):
-        self.run_archive_file(archive, SEQUENCES_FILENAME)
+    @contextmanager
+    def transaction(self):
+        """
+        Runs block of code inside a transaction.
+        """
+        self.run('BEGIN')
+        yield
+        self.run('COMMIT')
 
     def load_data(self, archive):
-        self.run('BEGIN')
-        for name in archive.namelist():
-            if name.startswith(DATA_DIR):
-                fp = archive.open(name)
-                filename = Path(name).stem
-                self.cursor.copy_expert(f'COPY {filename} FROM STDIN WITH CSV HEADER', fp)
-        self.run('COMMIT')
+        """
+        Loads all data from CSV files inside the archive to the database.
+        """
+        with self.transaction():
+            for name in archive.namelist():
+                if name.startswith(DATA_DIR):
+                    fp = archive.open(name)
+                    filename = Path(name).stem
+                    self.copy_expert(f'COPY {filename} FROM STDIN WITH CSV HEADER', fp)
