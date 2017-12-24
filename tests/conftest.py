@@ -1,3 +1,4 @@
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -35,8 +36,21 @@ def data(cursor):
 def db_wrapper(postgresql):
     parameters = postgresql.get_dsn_parameters()
     return DatabaseWrapper(
+        backend='postgres',
         dbname=parameters['dbname'],
         user=parameters['user'],
+        password=None,
         host=parameters['host'],
-        port=parameters['port']
+        port=parameters['port'],
     )
+
+
+@pytest.fixture
+def archive_filename(tmpdir):
+    return str(tmpdir.join('dump.zip'))
+
+
+@pytest.fixture
+def archive(archive_filename):
+    with zipfile.ZipFile(archive_filename, 'w', zipfile.ZIP_DEFLATED) as file:
+        yield file
