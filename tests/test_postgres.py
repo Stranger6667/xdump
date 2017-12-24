@@ -2,8 +2,10 @@
 import zipfile
 from unittest.mock import patch
 
+import psycopg2
 import pytest
 
+from .conftest import assert_schema
 from xdump.backends.postgresql import Backend
 
 
@@ -74,6 +76,12 @@ def test_dump_sequences(postgres_backend, cursor, sql, expected):
     assert f"SELECT pg_catalog.setval('groups_id_seq', {expected}, true);".encode() in postgres_backend.dump_sequences()
 
 
+def test_handling_error(postgres_backend):
+    with patch('psycopg2.extras.DictCursorBase.fetchall', side_effect=psycopg2.ProgrammingError), \
+            pytest.raises(psycopg2.ProgrammingError):
+        postgres_backend.run('BEGIN')
+
+
 @pytest.mark.parametrize('sql, expected', (
     ('', b'id,name\n'),
     ('INSERT INTO groups (name) VALUES (\'test\')', b'id,name\n1,test\n'),
@@ -129,14 +137,6 @@ class TestRecreating:
 def test_write_sequences(postgres_backend, archive):
     postgres_backend.write_sequences(archive)
     assert "SELECT pg_catalog.setval('groups_id_seq', 1, false);".encode() in archive.read('dump/sequences.sql')
-
-
-def assert_schema(schema, postgres_backend):
-    assert b'Dumped from database version 10.1' in schema
-    assert b'CREATE TABLE groups' in schema
-    selectable_tables = postgres_backend.get_selectable_tables()
-    for table in selectable_tables:
-        assert f'COPY {table}'.encode() not in schema
 
 
 def test_write_schema(postgres_backend, archive):

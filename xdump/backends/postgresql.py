@@ -48,10 +48,9 @@ class Backend(BaseBackend):
 
     def handle_run_exception(self, exc):
         """
-        Suppress ProgrammingError - like there is nothing to fetch.
-        TODO. Add check for this case, because ProgrammingError is too broad.
+        Suppress exception when there is nothing to fetch.
         """
-        if not isinstance(exc, psycopg2.ProgrammingError):
+        if str(exc) != 'no results to fetch':
             raise exc
 
     @property
