@@ -5,7 +5,7 @@ from unittest.mock import patch
 import psycopg2
 import pytest
 
-from xdump.backends.postgresql import Backend
+from xdump.postgresql import Backend
 
 from .conftest import assert_schema
 

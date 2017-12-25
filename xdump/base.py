@@ -68,6 +68,9 @@ class BaseBackend:
     # Dump & load
 
     def dump(self, filename, full_tables=(), partial_tables=None):
+        """
+        Creates a dump, which could be used to restore the database.
+        """
         partial_tables = partial_tables or {}
         with zipfile.ZipFile(filename, 'w', zipfile.ZIP_DEFLATED) as file:
             self.write_initial_setup(file)
@@ -89,6 +92,9 @@ class BaseBackend:
         raise NotImplementedError
 
     def populate_database(self, filename):
+        """
+        Recreates the database with data from the archive.
+        """
         self.recreate_database()
         self.load(filename)
 

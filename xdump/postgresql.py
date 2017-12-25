@@ -8,7 +8,7 @@ import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT, ISOLATION_LEVEL_REPEATABLE_READ
 from psycopg2.extras import RealDictConnection
 
-from ..utils import make_options
+from xdump.utils import make_options
 from .base import BaseBackend
 
 
