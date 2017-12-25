@@ -5,8 +5,9 @@ from unittest.mock import patch
 import psycopg2
 import pytest
 
-from .conftest import assert_schema
 from xdump.backends.postgresql import Backend
+
+from .conftest import assert_schema
 
 
 pytestmark = pytest.mark.usefixtures('schema')

@@ -5,10 +5,10 @@ from io import BytesIO
 from pathlib import Path
 
 import psycopg2
-from psycopg2.extensions import ISOLATION_LEVEL_REPEATABLE_READ, ISOLATION_LEVEL_AUTOCOMMIT
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT, ISOLATION_LEVEL_REPEATABLE_READ
 from psycopg2.extras import RealDictConnection
 
-from xdump.utils import make_options
+from ..utils import make_options
 from .base import BaseBackend
 
 
