@@ -39,11 +39,3 @@ def archive_filename(tmpdir):
 def archive(archive_filename):
     with zipfile.ZipFile(archive_filename, 'w', zipfile.ZIP_DEFLATED) as file:
         yield file
-
-
-def assert_schema(schema, postgres_backend):
-    assert b'Dumped from database version 10.1' in schema
-    assert b'CREATE TABLE groups' in schema
-    selectable_tables = postgres_backend.get_selectable_tables()
-    for table in selectable_tables:
-        assert f'COPY {table}'.encode() not in schema

@@ -7,8 +7,6 @@ import pytest
 
 from xdump.postgresql import Backend
 
-from .conftest import assert_schema
-
 
 pytestmark = pytest.mark.usefixtures('schema')
 
@@ -42,22 +40,37 @@ def postgres_backend(postgresql):
     )
 
 
-def test_run_dump(postgres_backend):
-    output = postgres_backend.run_dump()
-    assert b'Dumped from database version 10.1' in output
-    assert b'CREATE TABLE groups' in output
+def assert_schema(schema, postgres_backend, with_data=False):
+    assert b'Dumped from database version 10.1' in schema
+    assert b'CREATE TABLE groups' in schema
     selectable_tables = postgres_backend.get_selectable_tables()
     for table in selectable_tables:
-        assert f'COPY {table}'.encode() in output
+        assert (f'COPY {table}'.encode() in schema) is with_data
 
 
-def test_pg_dump_environment(postgres_backend):
-    postgres_backend.password = 'PASSW'
-    assert postgres_backend.pg_dump_environment['PGPASSWORD'] == postgres_backend.password
+def assert_unused_sequences(archive):
+    assert "SELECT pg_catalog.setval('groups_id_seq', 1, false);".encode() in archive.read('dump/sequences.sql')
 
 
-def test_pg_dump_environment_empty_password(postgres_backend):
-    assert 'PGPASSWORD' not in postgres_backend.pg_dump_environment
+class TestRunDump:
+
+    def test_run_dump(self, postgres_backend):
+        schema = postgres_backend.run_dump()
+        assert_schema(schema, postgres_backend, True)
+
+    def test_run_dump_environment(self, postgres_backend):
+        postgres_backend.password = 'PASSW'
+        assert postgres_backend.run_dump_environment['PGPASSWORD'] == postgres_backend.password
+
+    def test_run_dump_environment_empty_password(self, postgres_backend):
+        assert 'PGPASSWORD' not in postgres_backend.run_dump_environment
+
+    def test_dump_schema(self, postgres_backend):
+        """
+        Schema should not include any COPY statements.
+        """
+        output = postgres_backend.dump_schema()
+        assert_schema(output, postgres_backend)
 
 
 def test_get_selectable_tables(postgres_backend):
@@ -96,10 +109,8 @@ def test_export_to_csv(postgres_backend, cursor, sql, expected):
 class TestRecreating:
 
     @pytest.fixture
-    def archive(self, postgres_backend, archive_filename):
+    def dump(self, postgres_backend, archive_filename):
         postgres_backend.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL})
-        postgres_backend.recreate_database()
-        return zipfile.ZipFile(archive_filename)
 
     def is_database_exists(self, postgres_backend, dbname):
         return postgres_backend.run(
@@ -123,9 +134,9 @@ class TestRecreating:
         postgres_backend.recreate_database()
         assert self.is_database_exists(postgres_backend, postgres_backend.dbname)
 
-    @pytest.mark.usefixtures('schema', 'data')
-    def test_populate_database(self, postgres_backend, archive):
-        postgres_backend.populate_database(archive.filename)
+    @pytest.mark.usefixtures('schema', 'data', 'dump')
+    def test_populate_database(self, postgres_backend, archive_filename):
+        postgres_backend.populate_database(archive_filename)
         result = postgres_backend.run(
             "SELECT COUNT(*) FROM pg_tables WHERE tablename IN ('groups', 'employees', 'tickets')"
         )
@@ -134,24 +145,28 @@ class TestRecreating:
         assert result[0]['last_value'] == 2
         assert postgres_backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
 
+    @pytest.mark.usefixtures('schema', 'dump')
+    def test_dump(self, postgres_backend, archive_filename):
+        archive = zipfile.ZipFile(archive_filename)
+        assert archive.namelist() == [
+            'dump/schema.sql', 'dump/sequences.sql', 'dump/data/groups.csv', 'dump/data/employees.csv',
+        ]
+        assert archive.read('dump/data/groups.csv') == b'id,name\n'
+        assert archive.read('dump/data/employees.csv') == b'id,first_name,last_name,manager_id,group_id\n'
+        assert_unused_sequences(archive)
+        schema = archive.read('dump/schema.sql')
+        assert_schema(schema, postgres_backend)
+
 
 def test_write_sequences(postgres_backend, archive):
     postgres_backend.write_sequences(archive)
-    assert "SELECT pg_catalog.setval('groups_id_seq', 1, false);".encode() in archive.read('dump/sequences.sql')
+    assert_unused_sequences(archive)
 
 
 def test_write_schema(postgres_backend, archive):
     postgres_backend.write_schema(archive)
     schema = archive.read('dump/schema.sql')
     assert_schema(schema, postgres_backend)
-
-
-def test_dump_schema(postgres_backend):
-    """
-    Schema should not include any COPY statements.
-    """
-    output = postgres_backend.dump_schema()
-    assert_schema(output, postgres_backend)
 
 
 @pytest.mark.usefixtures('schema', 'data')
@@ -188,15 +203,3 @@ def test_transaction(postgres_backend, cursor, archive_filename):
         archive = zipfile.ZipFile(archive_filename)
         assert archive.read('dump/data/groups.csv') == b'id,name\n'
 
-
-def test_dump(postgres_backend, archive_filename):
-    postgres_backend.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL})
-    archive = zipfile.ZipFile(archive_filename)
-    assert archive.namelist() == [
-        'dump/schema.sql', 'dump/sequences.sql', 'dump/data/groups.csv', 'dump/data/employees.csv',
-    ]
-    assert archive.read('dump/data/groups.csv') == b'id,name\n'
-    assert archive.read('dump/data/employees.csv') == b'id,first_name,last_name,manager_id,group_id\n'
-    assert "SELECT pg_catalog.setval('groups_id_seq', 1, false);".encode() in archive.read('dump/sequences.sql')
-    schema = archive.read('dump/schema.sql')
-    assert_schema(schema, postgres_backend)

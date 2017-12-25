@@ -54,7 +54,7 @@ class Backend(BaseBackend):
             raise exc
 
     @property
-    def pg_dump_environment(self):
+    def run_dump_environment(self):
         if self.password:
             return {**os.environ, 'PGPASSWORD': self.password}
         return os.environ.copy()
@@ -70,7 +70,7 @@ class Backend(BaseBackend):
                 *args,
             ],
             stdout=subprocess.PIPE,
-            env=self.pg_dump_environment
+            env=self.run_dump_environment
         )
         return process.communicate()[0]
 
