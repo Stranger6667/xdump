@@ -33,5 +33,5 @@ setup(
         'Programming Language :: Python :: Implementation :: CPython',
     ],
     include_package_data=True,
-    install_requires=['attrs', 'cached_property', 'psycopg2'],
+    install_requires=['attrs', 'psycopg2'],
 )
