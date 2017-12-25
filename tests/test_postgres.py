@@ -5,7 +5,7 @@ from unittest.mock import patch
 import psycopg2
 import pytest
 
-from xdump.postgresql import Backend
+from xdump.postgresql import PostgreSQLBackend
 
 
 pytestmark = pytest.mark.usefixtures('schema')
@@ -31,7 +31,7 @@ SELECT * FROM employees_cte
 @pytest.fixture
 def postgres_backend(postgresql):
     parameters = postgresql.get_dsn_parameters()
-    return Backend(
+    return PostgreSQLBackend(
         dbname=parameters['dbname'],
         user=parameters['user'],
         password=None,
@@ -43,8 +43,7 @@ def postgres_backend(postgresql):
 def assert_schema(schema, postgres_backend, with_data=False):
     assert b'Dumped from database version 10.1' in schema
     assert b'CREATE TABLE groups' in schema
-    selectable_tables = postgres_backend.get_selectable_tables()
-    for table in selectable_tables:
+    for table in postgres_backend.get_selectable_tables():
         assert (f'COPY {table}'.encode() in schema) is with_data
 
 
@@ -108,10 +107,6 @@ def test_export_to_csv(postgres_backend, cursor, sql, expected):
 
 class TestRecreating:
 
-    @pytest.fixture
-    def dump(self, postgres_backend, archive_filename):
-        postgres_backend.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL})
-
     def is_database_exists(self, postgres_backend, dbname):
         return postgres_backend.run(
             'SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = %s)', [dbname]
@@ -134,16 +129,15 @@ class TestRecreating:
         postgres_backend.recreate_database()
         assert self.is_database_exists(postgres_backend, postgres_backend.dbname)
 
-    @pytest.mark.usefixtures('schema', 'data', 'dump')
-    def test_populate_database(self, postgres_backend, archive_filename):
-        postgres_backend.populate_database(archive_filename)
-        result = postgres_backend.run(
-            "SELECT COUNT(*) FROM pg_tables WHERE tablename IN ('groups', 'employees', 'tickets')"
-        )
-        assert result[0]['count'] == 3
-        result = postgres_backend.run("SELECT last_value FROM pg_sequences WHERE sequencename = 'groups_id_seq'")
-        assert result[0]['last_value'] == 2
-        assert postgres_backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
+
+class TestHighLevelInterface:
+    """
+    Creating a dump and loading it.
+    """
+
+    @pytest.fixture
+    def dump(self, postgres_backend, archive_filename):
+        postgres_backend.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL})
 
     @pytest.mark.usefixtures('schema', 'dump')
     def test_dump(self, postgres_backend, archive_filename):
@@ -156,6 +150,38 @@ class TestRecreating:
         assert_unused_sequences(archive)
         schema = archive.read('dump/schema.sql')
         assert_schema(schema, postgres_backend)
+
+    def test_transaction(self, postgres_backend, cursor, archive_filename):
+        """
+        We add extra values to the second table after first table was dumped.
+        This data should not appear in the result.
+        """
+
+        class Data:
+            is_loaded = False
+
+            def insert(self, *args, **kwargs):
+                if not self.is_loaded:
+                    cursor.execute('INSERT INTO groups (name) VALUES (\'test\')')
+                    self.is_loaded = True
+
+        with patch.object(postgres_backend, 'export_to_csv', wraps=postgres_backend.export_to_csv,
+                          side_effect=Data().insert):
+            postgres_backend.dump(archive_filename, ['employees', 'groups'], {})
+            archive = zipfile.ZipFile(archive_filename)
+            assert archive.read('dump/data/groups.csv') == b'id,name\n'
+
+    @pytest.mark.usefixtures('schema', 'data', 'dump')
+    def test_load(self, postgres_backend, archive_filename):
+        postgres_backend.recreate_database()
+        postgres_backend.load(archive_filename)
+        result = postgres_backend.run(
+            "SELECT COUNT(*) FROM pg_tables WHERE tablename IN ('groups', 'employees', 'tickets')"
+        )
+        assert result[0]['count'] == 3
+        result = postgres_backend.run("SELECT last_value FROM pg_sequences WHERE sequencename = 'groups_id_seq'")
+        assert result[0]['last_value'] == 2
+        assert postgres_backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
 
 
 def test_write_sequences(postgres_backend, archive):
@@ -187,19 +213,3 @@ def test_write_full_tables(postgres_backend, archive):
     postgres_backend.write_full_tables(archive, ['groups'])
     assert archive.read('dump/data/groups.csv') == b'id,name\n'
     assert archive.namelist() == ['dump/data/groups.csv']
-
-
-def test_transaction(postgres_backend, cursor, archive_filename):
-    is_added = False
-
-    def add_group(*args, **kwargs):
-        nonlocal is_added
-        if not is_added:
-            cursor.execute('INSERT INTO groups (name) VALUES (\'test\')')
-            is_added = True
-
-    with patch.object(postgres_backend, 'export_to_csv', wraps=postgres_backend.export_to_csv, side_effect=add_group):
-        postgres_backend.dump(archive_filename, ['employees', 'groups'], {})
-        archive = zipfile.ZipFile(archive_filename)
-        assert archive.read('dump/data/groups.csv') == b'id,name\n'
-

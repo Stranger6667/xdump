@@ -2,6 +2,7 @@
 import zipfile
 from contextlib import contextmanager
 from functools import lru_cache
+from pathlib import Path
 
 import attr
 
@@ -14,6 +15,8 @@ class BaseBackend:
     host = attr.ib()
     port = attr.ib()
     connections = {'default': {}}
+    schema_filename = 'dump/schema.sql'
+    initial_setup_files = (schema_filename, )
     data_dir = 'dump/data/'
 
     # Connection
@@ -65,7 +68,7 @@ class BaseBackend:
         yield
         self.run('COMMIT')
 
-    # Dump & load
+    # Dumping the data
 
     def dump(self, filename, full_tables=(), partial_tables=None):
         """
@@ -91,12 +94,7 @@ class BaseBackend:
     def write_data_file(self, file, table_name, sql):
         raise NotImplementedError
 
-    def populate_database(self, filename):
-        """
-        Recreates the database with data from the archive.
-        """
-        self.recreate_database()
-        self.load(filename)
+    # Database re-creation
 
     def recreate_database(self):
         """
@@ -108,6 +106,17 @@ class BaseBackend:
         self.get_cursor.cache_clear()
         self.get_connection.cache_clear()
 
+    def drop_connections(self, dbname):
+        raise NotImplementedError
+
+    def drop_database(self, dbname):
+        raise NotImplementedError
+
+    def create_database(self, dbname, owner):
+        raise NotImplementedError
+
+    # Loading the dump
+
     def load(self, filename):
         """
         Loads schema, sequences and data into the database.
@@ -115,3 +124,28 @@ class BaseBackend:
         archive = zipfile.ZipFile(filename)
         self.initial_setup(archive)
         self.load_data(archive)
+
+    def initial_setup(self, archive):
+        """
+        Loads schema and initial database configuration.
+        """
+        for filename in self.initial_setup_files:
+            sql = archive.read(filename)
+            self.run(sql)
+
+    def load_data(self, archive):
+        """
+        Loads all data from data files inside the archive to the database.
+        """
+        with self.transaction():
+            for name in archive.namelist():
+                if name.startswith(self.data_dir):
+                    fd = archive.open(name)
+                    filename = Path(name).stem
+                    self.load_data_file(filename, fd)
+
+    def load_data_file(self, filename, fd):
+        """
+        Loads a data file into the database.
+        """
+        raise NotImplementedError

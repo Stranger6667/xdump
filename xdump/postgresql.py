@@ -2,14 +2,13 @@
 import os
 import subprocess
 from io import BytesIO
-from pathlib import Path
 
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT, ISOLATION_LEVEL_REPEATABLE_READ
 from psycopg2.extras import RealDictConnection
 
-from xdump.utils import make_options
 from .base import BaseBackend
+from .utils import make_options
 
 
 SELECTABLE_TABLES_SQL = '''
@@ -19,14 +18,12 @@ WHERE
     table_schema NOT IN ('pg_catalog', 'information_schema') AND
     table_schema NOT LIKE 'pg_toast%'
 '''
-SEQUENCES_SQL = '''
-SELECT relname FROM pg_class WHERE relkind = 'S'
-'''
-SCHEMA_FILENAME = 'dump/schema.sql'
-SEQUENCES_FILENAME = 'dump/sequences.sql'
+SEQUENCES_SQL = "SELECT relname FROM pg_class WHERE relkind = 'S'"
 
 
-class Backend(BaseBackend):
+class PostgreSQLBackend(BaseBackend):
+    sequences_filename = 'dump/sequences.sql'
+    initial_setup_files = BaseBackend.initial_setup_files + (sequences_filename, )
     connections = {
         'default': {
             'isolation_level': ISOLATION_LEVEL_REPEATABLE_READ,
@@ -100,7 +97,7 @@ class Backend(BaseBackend):
         Writes a DB schema, functions, etc to the archive.
         """
         schema = self.dump_schema()
-        file.writestr(SCHEMA_FILENAME, schema)
+        file.writestr(self.schema_filename, schema)
 
     def get_sequences(self):
         """
@@ -117,7 +114,7 @@ class Backend(BaseBackend):
 
     def write_sequences(self, file):
         sequences = self.dump_sequences()
-        file.writestr(SEQUENCES_FILENAME, sequences)
+        file.writestr(self.sequences_filename, sequences)
 
     def copy_expert(self, *args, **kwargs):
         cursor = self.get_cursor()
@@ -144,21 +141,5 @@ class Backend(BaseBackend):
     def create_database(self, dbname, owner):
         self.run(f"CREATE DATABASE {dbname} WITH OWNER {owner}", using='maintenance')
 
-    def initial_setup(self, archive):
-        """
-        Loads schema and sequences SQL.
-        """
-        for filename in (SCHEMA_FILENAME, SEQUENCES_FILENAME):
-            sql = archive.read(filename)
-            self.run(sql)
-
-    def load_data(self, archive):
-        """
-        Loads all data from CSV files inside the archive to the database.
-        """
-        with self.transaction():
-            for name in archive.namelist():
-                if name.startswith(self.data_dir):
-                    fp = archive.open(name)
-                    filename = Path(name).stem
-                    self.copy_expert(f'COPY {filename} FROM STDIN WITH CSV HEADER', fp)
+    def load_data_file(self, filename, fd):
+        self.copy_expert(f'COPY {filename} FROM STDIN WITH CSV HEADER', fd)
