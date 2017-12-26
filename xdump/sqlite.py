@@ -11,6 +11,12 @@ def dict_factory(cursor, row):
     return {description[0]: value for description, value in zip(cursor.description, row)}
 
 
+def force_string(value):
+    if isinstance(value, bytes):
+        value = value.decode()
+    return value
+
+
 class SQLiteBackend(BaseBackend):
 
     def connect(self, *args, **kwargs):
@@ -22,25 +28,14 @@ class SQLiteBackend(BaseBackend):
         process = subprocess.Popen(['sqlite3', *args], stdout=subprocess.PIPE)
         return process.communicate()[0]
 
-    def run(self, sql, params=None, using='default'):
-        if isinstance(sql, bytes):
-            sql = sql.decode()
-        cursor = self.get_cursor(using)
-        cursor.executescript(sql)
-        try:
-            return cursor.fetchall()
-        except Exception as exc:
-            self.handle_run_exception(exc)
+    def run(self, sql, params=(), using='default'):
+        sql = force_string(sql)
+        return super().run(sql, params, using)
 
-    def run2(self, sql, params=(), using='default'):
-        if isinstance(sql, bytes):
-            sql = sql.decode()
-        cursor = self.get_cursor(using)
-        cursor.execute(sql, params)
-        try:
-            return cursor.fetchall()
-        except Exception as exc:
-            self.handle_run_exception(exc)
+    def run_many(self, sql):
+        sql = force_string(sql)
+        cursor = self.get_cursor()
+        cursor.executescript(sql)
 
     def dump_schema(self):
         return self.run_dump(self.dbname, '.schema')
@@ -50,17 +45,21 @@ class SQLiteBackend(BaseBackend):
         # Probably, the should not be included in the dump at all.
         # It seems like not possible to run everything in on transaction.
         # Probably it could be batched
+        # Another approach - dump it in Python
         return self.run_dump('-header', '-csv', self.dbname, sql)
 
     def drop_database(self, dbname):
         try:
             Path(dbname).unlink()
-        except ValueError:
+        except FileNotFoundError:
             pass
 
     def create_database(self, dbname, *args, **kwargs):
         with sqlite3.connect(dbname):
             pass
+
+    def run_setup_file(self, sql):
+        self.run_many(sql)
 
     def load_data(self, archive):
         """
@@ -76,7 +75,8 @@ class SQLiteBackend(BaseBackend):
         reader = DictReader(fd.read().decode().split('\n'), delimiter=',')
         fields = ','.join(reader.fieldnames)
         placeholders = ('?,' * len(reader.fieldnames))[:-1]
-        sql = f'INSERT INTO {table_name} ({fields}) VALUES ({placeholders})'
-        for line in reader:
-            v = [line[k] for k in reader.fieldnames]
-            self.run2(sql, v)
+        cursor = self.get_cursor()
+        cursor.executemany(
+            f'INSERT INTO {table_name} ({fields}) VALUES ({placeholders})',
+            [[line[k] for k in reader.fieldnames] for line in reader]
+        )

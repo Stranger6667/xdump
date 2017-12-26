@@ -141,7 +141,10 @@ class BaseBackend:
         """
         for filename in self.initial_setup_files:
             sql = archive.read(filename)
-            self.run(sql)
+            self.run_setup_file(sql)
+
+    def run_setup_file(self, sql):
+        return self.run(sql)
 
     def load_data(self, archive):
         """

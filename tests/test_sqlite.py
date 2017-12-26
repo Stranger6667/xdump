@@ -128,6 +128,10 @@ class TestRecreating:
         sqlite_backend.drop_database(dbname)
         assert not self.is_database_exists(dbname)
 
+    def test_non_existent_db(self, sqlite_backend):
+        assert sqlite_backend.drop_database('not_exists') is None
+        assert not self.is_database_exists('not_exists')
+
     def test_create_database(self, tmpdir, sqlite_backend):
         dbname = str(tmpdir.join('test_xxx.db'))
         sqlite_backend.create_database(dbname)
@@ -165,10 +169,10 @@ class TestHighLevelInterface:
     def test_load(self, sqlite_backend, archive_filename):
         sqlite_backend.recreate_database()
         sqlite_backend.load(archive_filename)
-        result = sqlite_backend.run2(
+        result = sqlite_backend.run(
             "SELECT COUNT(*) AS 'count' "
             "FROM sqlite_master WHERE type='table' AND name IN ('groups', 'employees', 'tickets')"
         )
         assert result[0]['count'] == 3
-        assert sqlite_backend.run2('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
+        assert sqlite_backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
 
