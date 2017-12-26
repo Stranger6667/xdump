@@ -134,5 +134,5 @@ class PostgreSQLBackend(BaseBackend):
     def create_database(self, dbname, owner):
         self.run(f"CREATE DATABASE {dbname} WITH OWNER {owner}", using='maintenance')
 
-    def load_data_file(self, filename, fd):
-        self.copy_expert(f'COPY {filename} FROM STDIN WITH CSV HEADER', fd)
+    def load_data_file(self, table_name, fd):
+        self.copy_expert(f'COPY {table_name} FROM STDIN WITH CSV HEADER', fd)

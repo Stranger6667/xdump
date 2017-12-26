@@ -151,10 +151,10 @@ class BaseBackend:
             for name in archive.namelist():
                 if name.startswith(self.data_dir):
                     fd = archive.open(name)
-                    filename = Path(name).stem
-                    self.load_data_file(filename, fd)
+                    table_name = Path(name).stem
+                    self.load_data_file(table_name, fd)
 
-    def load_data_file(self, filename, fd):
+    def load_data_file(self, table_name, fd):
         """
         Loads a data file into the database.
         """
