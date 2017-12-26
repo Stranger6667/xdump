@@ -106,9 +106,9 @@ class PostgreSQLBackend(BaseBackend):
             self.copy_expert(f'COPY ({sql}) TO STDOUT WITH CSV HEADER', output)
             return output.getvalue()
 
-    def recreate_database(self):
+    def recreate_database(self, owner):
         self.drop_connections(self.dbname)
-        super().recreate_database()
+        super().recreate_database(owner)
 
     def drop_connections(self, dbname):
         self.run('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s', [dbname], 'maintenance')

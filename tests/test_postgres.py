@@ -122,7 +122,7 @@ class TestRecreating:
 
     @pytest.mark.usefixtures('schema', 'data')
     def test_recreate_database(self, postgres_backend):
-        postgres_backend.recreate_database()
+        postgres_backend.recreate_database(postgres_backend.user)
         assert self.is_database_exists(postgres_backend, postgres_backend.dbname)
 
 
@@ -169,7 +169,7 @@ class TestHighLevelInterface:
 
     @pytest.mark.usefixtures('schema', 'data', 'dump')
     def test_load(self, postgres_backend, archive_filename):
-        postgres_backend.recreate_database()
+        postgres_backend.recreate_database(postgres_backend.user)
         postgres_backend.load(archive_filename)
         result = postgres_backend.run(
             "SELECT COUNT(*) FROM pg_tables WHERE tablename IN ('groups', 'employees', 'tickets')"
