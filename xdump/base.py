@@ -80,6 +80,16 @@ class BaseBackend:
             self.write_full_tables(file, full_tables)
             self.write_partial_tables(file, partial_tables)
 
+    def write_initial_setup(self, file):
+        self.write_schema(file)
+
+    def write_schema(self, file):
+        """
+        Writes a DB schema, functions, etc to the archive.
+        """
+        schema = self.dump_schema()
+        file.writestr(self.schema_filename, schema)
+
     def write_full_tables(self, file, tables):
         """
         Writes a complete tables dump to the archive.
@@ -92,6 +102,10 @@ class BaseBackend:
             self.write_data_file(file, table_name, sql)
 
     def write_data_file(self, file, table_name, sql):
+        data = self.export_to_csv(sql)
+        file.writestr(f'{self.data_dir}{table_name}.csv', data)
+
+    def export_to_csv(self, sql):
         raise NotImplementedError
 
     # Database re-creation
@@ -100,19 +114,15 @@ class BaseBackend:
         """
         Drops all connections to the database, drops the database and creates it again.
         """
-        self.drop_connections(self.dbname)
         self.drop_database(self.dbname)
         self.create_database(self.dbname, self.user)
         self.get_cursor.cache_clear()
         self.get_connection.cache_clear()
 
-    def drop_connections(self, dbname):
-        raise NotImplementedError
-
     def drop_database(self, dbname):
         raise NotImplementedError
 
-    def create_database(self, dbname, owner):
+    def create_database(self, dbname, *args, **kwargs):
         raise NotImplementedError
 
     # Loading the dump

@@ -22,12 +22,12 @@ def execute_file(cursor, filename):
 
 @pytest.fixture
 def schema(cursor):
-    execute_file(cursor, 'schema.sql')
+    execute_file(cursor, 'sql/schema.sql')
 
 
 @pytest.fixture
 def data(cursor):
-    execute_file(cursor, 'data.sql')
+    execute_file(cursor, 'sql/postgres_data.sql')
 
 
 @pytest.fixture

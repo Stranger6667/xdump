@@ -72,7 +72,7 @@ class PostgreSQLBackend(BaseBackend):
         return process.communicate()[0]
 
     def write_initial_setup(self, file):
-        self.write_schema(file)
+        super().write_initial_setup(file)
         self.write_sequences(file)
 
     def get_selectable_tables(self):
@@ -91,13 +91,6 @@ class PostgreSQLBackend(BaseBackend):
             '-x',  # Do not dump privileges
             *make_options('-t', selectable_tables)
         )
-
-    def write_schema(self, file):
-        """
-        Writes a DB schema, functions, etc to the archive.
-        """
-        schema = self.dump_schema()
-        file.writestr(self.schema_filename, schema)
 
     def get_sequences(self):
         """
@@ -128,9 +121,9 @@ class PostgreSQLBackend(BaseBackend):
             self.copy_expert(f'COPY ({sql}) TO STDOUT WITH CSV HEADER', output)
             return output.getvalue()
 
-    def write_data_file(self, file, table_name, sql):
-        data = self.export_to_csv(sql)
-        file.writestr(f'{self.data_dir}{table_name}.csv', data)
+    def recreate_database(self):
+        self.drop_connections(self.dbname)
+        super().recreate_database()
 
     def drop_connections(self, dbname):
         self.run('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s', [dbname], 'maintenance')

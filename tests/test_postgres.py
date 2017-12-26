@@ -209,7 +209,8 @@ def test_write_partial_tables(postgres_backend, archive):
                                                       b'1,John,Doe,,1\n'
 
 
+@pytest.mark.usefixtures('schema', 'data')
 def test_write_full_tables(postgres_backend, archive):
     postgres_backend.write_full_tables(archive, ['groups'])
-    assert archive.read('dump/data/groups.csv') == b'id,name\n'
+    assert archive.read('dump/data/groups.csv') == b'id,name\n1,Admin\n2,User\n'
     assert archive.namelist() == ['dump/data/groups.csv']
