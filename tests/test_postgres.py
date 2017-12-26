@@ -40,10 +40,10 @@ def postgres_backend(postgresql):
     )
 
 
-def assert_schema(schema, postgres_backend, with_data=False):
+def assert_schema(schema, with_data=False):
     assert b'Dumped from database version 10.1' in schema
     assert b'CREATE TABLE groups' in schema
-    for table in postgres_backend.get_selectable_tables():
+    for table in ('groups', 'employees', 'tickets'):
         assert (f'COPY {table}'.encode() in schema) is with_data
 
 
@@ -55,7 +55,7 @@ class TestRunDump:
 
     def test_run_dump(self, postgres_backend):
         schema = postgres_backend.run_dump()
-        assert_schema(schema, postgres_backend, True)
+        assert_schema(schema, True)
 
     def test_run_dump_environment(self, postgres_backend):
         postgres_backend.password = 'PASSW'
@@ -69,11 +69,7 @@ class TestRunDump:
         Schema should not include any COPY statements.
         """
         output = postgres_backend.dump_schema()
-        assert_schema(output, postgres_backend)
-
-
-def test_get_selectable_tables(postgres_backend):
-    assert postgres_backend.get_selectable_tables() == ['groups', 'employees', 'tickets']
+        assert_schema(output)
 
 
 def test_get_sequences(postgres_backend):
@@ -140,7 +136,7 @@ class TestHighLevelInterface:
         postgres_backend.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL})
 
     @pytest.mark.usefixtures('schema', 'dump')
-    def test_dump(self, postgres_backend, archive_filename):
+    def test_dump(self, archive_filename):
         archive = zipfile.ZipFile(archive_filename)
         assert archive.namelist() == [
             'dump/schema.sql', 'dump/sequences.sql', 'dump/data/groups.csv', 'dump/data/employees.csv',
@@ -149,7 +145,7 @@ class TestHighLevelInterface:
         assert archive.read('dump/data/employees.csv') == b'id,first_name,last_name,manager_id,group_id\n'
         assert_unused_sequences(archive)
         schema = archive.read('dump/schema.sql')
-        assert_schema(schema, postgres_backend)
+        assert_schema(schema)
 
     def test_transaction(self, postgres_backend, cursor, archive_filename):
         """
@@ -192,7 +188,7 @@ def test_write_sequences(postgres_backend, archive):
 def test_write_schema(postgres_backend, archive):
     postgres_backend.write_schema(archive)
     schema = archive.read('dump/schema.sql')
-    assert_schema(schema, postgres_backend)
+    assert_schema(schema)
 
 
 @pytest.mark.usefixtures('schema', 'data')
