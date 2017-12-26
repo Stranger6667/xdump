@@ -7,10 +7,16 @@ from pathlib import Path
 from .base import BaseBackend
 
 
+def dict_factory(cursor, row):
+    return {description[0]: value for description, value in zip(cursor.description, row)}
+
+
 class SQLiteBackend(BaseBackend):
 
     def connect(self, *args, **kwargs):
-        return sqlite3.connect(self.dbname)
+        connection = sqlite3.connect(self.dbname)
+        connection.row_factory = dict_factory
+        return connection
 
     def run_dump(self, *args, **kwargs):
         process = subprocess.Popen(['sqlite3', *args], stdout=subprocess.PIPE)

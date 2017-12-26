@@ -166,8 +166,9 @@ class TestHighLevelInterface:
         sqlite_backend.recreate_database()
         sqlite_backend.load(archive_filename)
         result = sqlite_backend.run2(
-            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('groups', 'employees', 'tickets')"
+            "SELECT COUNT(*) AS 'count' "
+            "FROM sqlite_master WHERE type='table' AND name IN ('groups', 'employees', 'tickets')"
         )
-        assert result[0][0] == 3
-        assert sqlite_backend.run2('SELECT name FROM groups') == [('Admin',), ('User',)]
+        assert result[0]['count'] == 3
+        assert sqlite_backend.run2('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
 
