@@ -1,7 +1,8 @@
 # coding: utf-8
 import sqlite3
 import subprocess
-from csv import DictReader
+from csv import DictReader, DictWriter
+from io import StringIO
 from pathlib import Path
 
 from .base import BaseBackend
@@ -37,16 +38,23 @@ class SQLiteBackend(BaseBackend):
         cursor = self.get_cursor()
         cursor.executescript(sql)
 
+    def dump(self, *args, **kwargs):
+        cursor = self.get_cursor()
+        cursor.execute('BEGIN IMMEDIATE')
+        super().dump(*args, **kwargs)
+
     def dump_schema(self):
         return self.run_dump(self.dbname, '.schema')
 
     def export_to_csv(self, sql):
-        # TODO. SQLite could produce empty CSV files, without headers if there is no data.
-        # Probably, the should not be included in the dump at all.
-        # It seems like not possible to run everything in on transaction.
-        # Probably it could be batched
-        # Another approach - dump it in Python
-        return self.run_dump('-header', '-csv', self.dbname, sql)
+        with StringIO() as output:
+            cursor = self.get_cursor()
+            cursor.execute(sql)
+            data = cursor.fetchall()
+            writer = DictWriter(output, fieldnames=[column[0] for column in cursor.description], lineterminator='\n')
+            writer.writeheader()
+            writer.writerows(data)
+            return output.getvalue().encode()
 
     def drop_database(self, dbname):
         try:

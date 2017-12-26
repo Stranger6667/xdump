@@ -1,6 +1,7 @@
 # coding: utf-8
 import zipfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -164,6 +165,31 @@ class TestHighLevelInterface:
                                                           b'1,John,Doe,,1\n'
         schema = archive.read('dump/schema.sql')
         assert_schema(schema)
+
+    @pytest.mark.usefixtures('schema', 'data')
+    def test_transaction(self, sqlite_backend, cursor, archive_filename):
+        """
+        We add extra values to the second table after first table was dumped.
+        This data should not appear in the result.
+        """
+        insert = 'INSERT INTO groups (id, name) VALUES (3,\'test\')'
+
+        class Data:
+            is_loaded = False
+
+            def insert(self, *args, **kwargs):
+                if not self.is_loaded:
+                    with pytest.raises(sqlite3.OperationalError, message='database is locked'):
+                        cursor.execute(insert)
+                    self.is_loaded = True
+
+        with patch.object(sqlite_backend, 'export_to_csv', wraps=sqlite_backend.export_to_csv,
+                          side_effect=Data().insert):
+            sqlite_backend.dump(archive_filename, ['employees', 'groups'], {})
+            archive = zipfile.ZipFile(archive_filename)
+            assert archive.read('dump/data/groups.csv') == b'id,name\n1,Admin\n2,User\n'
+        sqlite_backend.run(insert)
+        assert sqlite_backend.run('SELECT COUNT(*) AS "count" FROM groups')[0]['count'] == 3
 
     @pytest.mark.usefixtures('schema', 'data', 'dump')
     def test_load(self, sqlite_backend, archive_filename):
