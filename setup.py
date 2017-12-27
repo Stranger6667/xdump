@@ -34,4 +34,7 @@ setup(
     ],
     include_package_data=True,
     install_requires=['attrs', 'psycopg2'],
+    extras_require={
+        'django':  ['django>=1.11'],
+    }
 )
