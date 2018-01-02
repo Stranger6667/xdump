@@ -7,25 +7,10 @@ import pytest
 
 from xdump.postgresql import PostgreSQLBackend
 
+from .conftest import EMPLOYEES_SQL, assert_schema, assert_unused_sequences
+
 
 pytestmark = pytest.mark.usefixtures('schema')
-
-EMPLOYEES_SQL = '''
-WITH RECURSIVE employees_cte AS (
-  SELECT * 
-  FROM recent_employees
-  UNION
-  SELECT E.*
-  FROM employees E
-  INNER JOIN employees_cte ON (employees_cte.manager_id = E.id)
-), recent_employees AS (
-  SELECT * 
-  FROM employees
-  ORDER BY id DESC
-  LIMIT 2
-)
-SELECT * FROM employees_cte
-'''
 
 
 @pytest.fixture
@@ -38,17 +23,6 @@ def postgres_backend(postgresql):
         host=parameters['host'],
         port=parameters['port'],
     )
-
-
-def assert_schema(schema, with_data=False):
-    assert b'Dumped from database version 10.1' in schema
-    assert b'CREATE TABLE groups' in schema
-    for table in ('groups', 'employees', 'tickets'):
-        assert (f'COPY {table}'.encode() in schema) is with_data
-
-
-def assert_unused_sequences(archive):
-    assert "SELECT pg_catalog.setval('groups_id_seq', 1, false);".encode() in archive.read('dump/sequences.sql')
 
 
 class TestRunDump:

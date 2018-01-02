@@ -13,7 +13,7 @@ class BaseBackend:
     user = attr.ib()
     password = attr.ib()
     host = attr.ib()
-    port = attr.ib()
+    port = attr.ib(convert=str)
     connections = {'default': {}}
     schema_filename = 'dump/schema.sql'
     initial_setup_files = (schema_filename, )
