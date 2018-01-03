@@ -1,6 +1,18 @@
 XDump
 =====
 
+.. image:: https://travis-ci.org/Stranger6667/xdump.svg?branch=master
+   :target: https://travis-ci.org/Stranger6667/xdump
+   :alt: Build Status
+
+.. image:: https://codecov.io/github/Stranger6667/xdump/coverage.svg?branch=master
+   :target: https://codecov.io/github/Stranger6667/xdump?branch=master
+   :alt: Coverage Status
+
+.. image:: https://img.shields.io/pypi/v/xdump.svg
+    :target: https://pypi.python.org/pypi/xdump
+    :alt: Latest PyPI version
+
 XDump is an utility to make partial consistent dump and load it into the database.
 
 The idea is to provide an ability to specify what to include in the dump via SQL queries.
