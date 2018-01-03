@@ -26,11 +26,13 @@ WITH RECURSIVE employees_cte AS (
 SELECT * FROM employees_cte
 '''
 
-POSTGRESQL_VERSION = '9.6'
 
 if 'TRAVIS' in os.environ:
+    POSTGRESQL_VERSION = '9.6'
     postgresql_proc = factories.postgresql_proc(executable=f'/usr/lib/postgresql/{POSTGRESQL_VERSION}/bin/pg_ctl')
     postgresql = factories.postgresql('postgresql_proc')
+else:
+    POSTGRESQL_VERSION = '10.1'
 
 
 @pytest.fixture
