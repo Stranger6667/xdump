@@ -110,10 +110,12 @@ class BaseBackend:
 
     # Database re-creation
 
-    def recreate_database(self, owner):
+    def recreate_database(self, owner=None):
         """
         Drops all connections to the database, drops the database and creates it again.
         """
+        if owner is None:
+            owner = self.user
         self.drop_database(self.dbname)
         self.create_database(self.dbname, owner)
         self.get_cursor.cache_clear()

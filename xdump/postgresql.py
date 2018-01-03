@@ -106,7 +106,7 @@ class PostgreSQLBackend(BaseBackend):
             self.copy_expert(f'COPY ({sql}) TO STDOUT WITH CSV HEADER', output)
             return output.getvalue()
 
-    def recreate_database(self, owner):
+    def recreate_database(self, owner=None):
         self.drop_connections(self.dbname)
         super().recreate_database(owner)
 
