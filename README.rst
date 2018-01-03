@@ -120,3 +120,9 @@ And usage is:
 .. code-block:: bash
 
     $ make sync-production TARGET=john@production.com PYTHON=/path/to/python/in/venv
+
+
+Python support
+==============
+
+XDump supports only Python 3.6 at the moment (but the supported versions list will be extended in the future).
