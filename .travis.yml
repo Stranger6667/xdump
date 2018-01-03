@@ -3,6 +3,11 @@ services:
   - postgresql
 addons:
   postgresql: "9.6"
+  apt:
+    sources:
+      - travis-ci/sqlite3
+    packages:
+      - sqlite3
 language: python
 matrix:
   include:
@@ -14,10 +19,6 @@ matrix:
       - TOX_ENV=py36
 script:
   - tox -e $TOX_ENV
-before_install:
-  - sudo apt-add-repository -y ppa:travis-ci/sqlite3
-  - sudo apt-get -y update
-  - sudo apt-get -y install sqlite3=3.7.15.1-1~travis1
 install:
   - travis_retry pip install tox
 after_success:
