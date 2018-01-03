@@ -1,27 +1,38 @@
+import os
 import zipfile
 from pathlib import Path
 
 import pytest
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
+from pytest_postgresql import factories
+
 
 CURRENT_DIR = Path(__file__).parent.absolute()
 EMPLOYEES_SQL = '''
 WITH RECURSIVE employees_cte AS (
-  SELECT * 
+  SELECT *
   FROM recent_employees
   UNION
   SELECT E.*
   FROM employees E
   INNER JOIN employees_cte ON (employees_cte.manager_id = E.id)
 ), recent_employees AS (
-  SELECT * 
+  SELECT *
   FROM employees
   ORDER BY id DESC
   LIMIT 2
 )
 SELECT * FROM employees_cte
 '''
+
+
+if 'TRAVIS' in os.environ:
+    POSTGRESQL_VERSION = '9.6'
+    postgresql_proc = factories.postgresql_proc(executable=f'/usr/lib/postgresql/{POSTGRESQL_VERSION}/bin/pg_ctl')
+    postgresql = factories.postgresql('postgresql_proc')
+else:
+    POSTGRESQL_VERSION = '10.1'
 
 
 @pytest.fixture
@@ -72,7 +83,7 @@ def archive(archive_filename):
 
 
 def assert_schema(schema, with_data=False):
-    assert b'Dumped from database version 10.1' in schema
+    assert f'Dumped from database version {POSTGRESQL_VERSION}'.encode() in schema
     assert b'CREATE TABLE groups' in schema
     for table in ('groups', 'employees', 'tickets'):
         assert (f'COPY {table}'.encode() in schema) is with_data

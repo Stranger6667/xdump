@@ -135,8 +135,8 @@ class TestHighLevelInterface:
             "SELECT COUNT(*) FROM pg_tables WHERE tablename IN ('groups', 'employees', 'tickets')"
         )
         assert result[0]['count'] == 3
-        result = postgres_backend.run("SELECT last_value FROM pg_sequences WHERE sequencename = 'groups_id_seq'")
-        assert result[0]['last_value'] == 2
+        result = postgres_backend.run("SELECT currval('groups_id_seq')")
+        assert result[0]['currval'] == 2
         assert postgres_backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
 
 
