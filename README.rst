@@ -16,7 +16,7 @@ XDump can be obtained with ``pip``::
 Usage example
 =============
 
-Making a dump:
+Making a dump (on production replica for example):
 
 .. code-block:: python
 
@@ -37,14 +37,16 @@ Making a dump:
     SELECT * FROM employees_cte
     '''
     >>> from xdump.postgresql import PostgreSQLBackend
-    >>> backend = PostgreSQLBackend(dbname='app_db', user='app', password='pass', host='127.0.0.1', port='5432')
+    >>> backend = PostgreSQLBackend(dbname='app_db', user='prod', password='pass', host='127.0.0.1', port='5432')
     >>> backend.dump('/path/to/dump.zip', full_tables=['groups'], partial_tables={'employees': EMPLOYEES_SQL})
 
 
-Load a dump:
+Load a dump on you local machine:
 
 .. code-block:: python
 
+    from xdump.postgresql import PostgreSQLBackend
+    >>> backend = PostgreSQLBackend(dbname='app_db', user='local', password='pass', host='127.0.0.1', port='5432')
     >>> backend.load('/path/to/dump.zip')
 
 RDBMS support
@@ -102,3 +104,19 @@ Possible options to both commands:
 
 - ``alias`` - allows you to choose database config from DATABASES, that is used during the execution;
 - ``backend`` - importable string, that leads to custom dump backend class.
+
+The following ``make`` command could be useful to get a configured dump from production to your local machine:
+
+.. code-block:: bash
+
+    sync-production:
+        ssh -t $(TARGET) "DJANGO_SETTINGS_MODULE=settings.production /path/to/manage.py create_dump -f /tmp/dump.zip"
+        scp $(TARGET):/tmp/dump.zip ./dump.zip
+        ssh -t $(TARGET) "rm /tmp/dump.zip"
+        DJANGO_SETTINGS_MODULE=settings.local $(PYTHON) manage.py load_dump -f ./dump.zip
+
+And usage is:
+
+.. code-block:: bash
+
+    $ make sync-production TARGET=john@production.com PYTHON=/path/to/python/in/venv
