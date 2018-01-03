@@ -9,5 +9,7 @@ matrix:
       - TOX_ENV=py36
 script:
   - tox -e $TOX_ENV
+install:
+  - travis_retry pip install tox
 after_success:
   - bash <(curl -s https://codecov.io/bash)
