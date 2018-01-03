@@ -26,13 +26,13 @@ WITH RECURSIVE employees_cte AS (
 SELECT * FROM employees_cte
 '''
 
+POSTGRESQL_VERSION = '9.6'
 
 if 'TRAVIS' in os.environ:
-    postgresql_proc = factories.postgresql_proc(executable='/usr/lib/postgresql/9.6/bin/pg_ctl')
+    postgresql_proc = factories.postgresql_proc(executable=f'/usr/lib/postgresql/{POSTGRESQL_VERSION}/bin/pg_ctl')
     postgresql = factories.postgresql('postgresql_proc')
 
 
-print(os.environ)
 @pytest.fixture
 def cursor(postgresql):
     postgresql.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
@@ -81,7 +81,7 @@ def archive(archive_filename):
 
 
 def assert_schema(schema, with_data=False):
-    assert b'Dumped from database version 10.1' in schema
+    assert f'Dumped from database version {POSTGRESQL_VERSION}'.encode() in schema
     assert b'CREATE TABLE groups' in schema
     for table in ('groups', 'employees', 'tickets'):
         assert (f'COPY {table}'.encode() in schema) is with_data
