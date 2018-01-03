@@ -12,7 +12,7 @@ setup(
     name='xdump',
     url='https://github.com/Stranger6667/xdump',
     version=xdump.__version__,
-    packages=['xdump', 'xdump.extra'],
+    packages=['xdump'],
     license='MIT',
     author='Dmitry Dygalo',
     author_email='dadygalo@gmail.com',
