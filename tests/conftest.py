@@ -11,14 +11,14 @@ from pytest_postgresql import factories
 CURRENT_DIR = Path(__file__).parent.absolute()
 EMPLOYEES_SQL = '''
 WITH RECURSIVE employees_cte AS (
-  SELECT * 
+  SELECT *
   FROM recent_employees
   UNION
   SELECT E.*
   FROM employees E
   INNER JOIN employees_cte ON (employees_cte.manager_id = E.id)
 ), recent_employees AS (
-  SELECT * 
+  SELECT *
   FROM employees
   ORDER BY id DESC
   LIMIT 2
