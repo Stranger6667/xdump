@@ -1,8 +1,11 @@
+import os
 import zipfile
 from pathlib import Path
 
 import pytest
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
+from pytest_postgresql import factories
 
 
 CURRENT_DIR = Path(__file__).parent.absolute()
@@ -22,6 +25,11 @@ WITH RECURSIVE employees_cte AS (
 )
 SELECT * FROM employees_cte
 '''
+
+
+if 'TRAVIS' in os.environ:
+    postgresql_proc = factories.postgresql_proc(executable='/usr/lib/postgresql/9.6/bin/pg_ctl')
+    postgresql = factories.postgresql('postgresql_proc')
 
 
 @pytest.fixture
