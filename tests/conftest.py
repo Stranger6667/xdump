@@ -32,6 +32,7 @@ if 'TRAVIS' in os.environ:
     postgresql = factories.postgresql('postgresql_proc')
 
 
+print(os.environ)
 @pytest.fixture
 def cursor(postgresql):
     postgresql.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)

@@ -1,5 +1,5 @@
 services:
-  - postgresql
+  - postgresql "9.6"
 language: python
 matrix:
   include:
