@@ -110,10 +110,10 @@ The following ``make`` command could be useful to get a configured dump from pro
 .. code-block:: bash
 
     sync-production:
-        ssh -t $(TARGET) "DJANGO_SETTINGS_MODULE=settings.production /path/to/manage.py create_dump -f /tmp/dump.zip"
+        ssh -t $(TARGET) "DJANGO_SETTINGS_MODULE=settings.production /path/to/manage.py xdump /tmp/dump.zip"
         scp $(TARGET):/tmp/dump.zip ./dump.zip
         ssh -t $(TARGET) "rm /tmp/dump.zip"
-        DJANGO_SETTINGS_MODULE=settings.local $(PYTHON) manage.py load_dump -f ./dump.zip
+        DJANGO_SETTINGS_MODULE=settings.local $(PYTHON) manage.py xload ./dump.zip
 
 And usage is:
 
