@@ -11,13 +11,6 @@ from .base import BaseBackend
 from .utils import make_options
 
 
-SELECTABLE_TABLES_SQL = '''
-SELECT table_name
-FROM information_schema.tables
-WHERE
-    table_schema NOT IN ('pg_catalog', 'information_schema') AND
-    table_schema NOT LIKE 'pg_toast%'
-'''
 SEQUENCES_SQL = "SELECT relname FROM pg_class WHERE relkind = 'S'"
 
 
@@ -75,21 +68,13 @@ class PostgreSQLBackend(BaseBackend):
         super().write_initial_setup(file)
         self.write_sequences(file)
 
-    def get_selectable_tables(self):
-        """
-        Returns a list of tables, from which current user can select data.
-        """
-        return [row['table_name'] for row in self.run(SELECTABLE_TABLES_SQL)]
-
     def dump_schema(self):
         """
         Produces SQL for the schema of the database.
         """
-        selectable_tables = self.get_selectable_tables()
         return self.run_dump(
             '-s',  # Schema-only
             '-x',  # Do not dump privileges
-            *make_options('-t', selectable_tables)
         )
 
     def get_sequences(self):
@@ -121,9 +106,9 @@ class PostgreSQLBackend(BaseBackend):
             self.copy_expert(f'COPY ({sql}) TO STDOUT WITH CSV HEADER', output)
             return output.getvalue()
 
-    def recreate_database(self):
+    def recreate_database(self, owner=None):
         self.drop_connections(self.dbname)
-        super().recreate_database()
+        super().recreate_database(owner)
 
     def drop_connections(self, dbname):
         self.run('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s', [dbname], 'maintenance')

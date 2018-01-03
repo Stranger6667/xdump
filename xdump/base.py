@@ -13,7 +13,7 @@ class BaseBackend:
     user = attr.ib()
     password = attr.ib()
     host = attr.ib()
-    port = attr.ib()
+    port = attr.ib(convert=str)
     connections = {'default': {}}
     schema_filename = 'dump/schema.sql'
     initial_setup_files = (schema_filename, )
@@ -110,12 +110,14 @@ class BaseBackend:
 
     # Database re-creation
 
-    def recreate_database(self):
+    def recreate_database(self, owner=None):
         """
         Drops all connections to the database, drops the database and creates it again.
         """
+        if owner is None:
+            owner = self.user
         self.drop_database(self.dbname)
-        self.create_database(self.dbname, self.user)
+        self.create_database(self.dbname, owner)
         self.get_cursor.cache_clear()
         self.get_connection.cache_clear()
 

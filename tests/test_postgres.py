@@ -5,57 +5,17 @@ from unittest.mock import patch
 import psycopg2
 import pytest
 
-from xdump.postgresql import PostgreSQLBackend
+from .conftest import EMPLOYEES_SQL, assert_schema, assert_unused_sequences
 
 
 pytestmark = pytest.mark.usefixtures('schema')
-
-EMPLOYEES_SQL = '''
-WITH RECURSIVE employees_cte AS (
-  SELECT * 
-  FROM recent_employees
-  UNION
-  SELECT E.*
-  FROM employees E
-  INNER JOIN employees_cte ON (employees_cte.manager_id = E.id)
-), recent_employees AS (
-  SELECT * 
-  FROM employees
-  ORDER BY id DESC
-  LIMIT 2
-)
-SELECT * FROM employees_cte
-'''
-
-
-@pytest.fixture
-def postgres_backend(postgresql):
-    parameters = postgresql.get_dsn_parameters()
-    return PostgreSQLBackend(
-        dbname=parameters['dbname'],
-        user=parameters['user'],
-        password=None,
-        host=parameters['host'],
-        port=parameters['port'],
-    )
-
-
-def assert_schema(schema, postgres_backend, with_data=False):
-    assert b'Dumped from database version 10.1' in schema
-    assert b'CREATE TABLE groups' in schema
-    for table in postgres_backend.get_selectable_tables():
-        assert (f'COPY {table}'.encode() in schema) is with_data
-
-
-def assert_unused_sequences(archive):
-    assert "SELECT pg_catalog.setval('groups_id_seq', 1, false);".encode() in archive.read('dump/sequences.sql')
 
 
 class TestRunDump:
 
     def test_run_dump(self, postgres_backend):
         schema = postgres_backend.run_dump()
-        assert_schema(schema, postgres_backend, True)
+        assert_schema(schema, True)
 
     def test_run_dump_environment(self, postgres_backend):
         postgres_backend.password = 'PASSW'
@@ -69,11 +29,7 @@ class TestRunDump:
         Schema should not include any COPY statements.
         """
         output = postgres_backend.dump_schema()
-        assert_schema(output, postgres_backend)
-
-
-def test_get_selectable_tables(postgres_backend):
-    assert postgres_backend.get_selectable_tables() == ['groups', 'employees', 'tickets']
+        assert_schema(output)
 
 
 def test_get_sequences(postgres_backend):
@@ -140,7 +96,7 @@ class TestHighLevelInterface:
         postgres_backend.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL})
 
     @pytest.mark.usefixtures('schema', 'dump')
-    def test_dump(self, postgres_backend, archive_filename):
+    def test_dump(self, archive_filename):
         archive = zipfile.ZipFile(archive_filename)
         assert archive.namelist() == [
             'dump/schema.sql', 'dump/sequences.sql', 'dump/data/groups.csv', 'dump/data/employees.csv',
@@ -149,7 +105,7 @@ class TestHighLevelInterface:
         assert archive.read('dump/data/employees.csv') == b'id,first_name,last_name,manager_id,group_id\n'
         assert_unused_sequences(archive)
         schema = archive.read('dump/schema.sql')
-        assert_schema(schema, postgres_backend)
+        assert_schema(schema)
 
     def test_transaction(self, postgres_backend, cursor, archive_filename):
         """
@@ -179,8 +135,8 @@ class TestHighLevelInterface:
             "SELECT COUNT(*) FROM pg_tables WHERE tablename IN ('groups', 'employees', 'tickets')"
         )
         assert result[0]['count'] == 3
-        result = postgres_backend.run("SELECT last_value FROM pg_sequences WHERE sequencename = 'groups_id_seq'")
-        assert result[0]['last_value'] == 2
+        result = postgres_backend.run("SELECT currval('groups_id_seq')")
+        assert result[0]['currval'] == 2
         assert postgres_backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
 
 
@@ -192,7 +148,7 @@ def test_write_sequences(postgres_backend, archive):
 def test_write_schema(postgres_backend, archive):
     postgres_backend.write_schema(archive)
     schema = archive.read('dump/schema.sql')
-    assert_schema(schema, postgres_backend)
+    assert_schema(schema)
 
 
 @pytest.mark.usefixtures('schema', 'data')
