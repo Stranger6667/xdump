@@ -5,24 +5,10 @@ from unittest.mock import patch
 import psycopg2
 import pytest
 
-from xdump.postgresql import PostgreSQLBackend
-
 from .conftest import EMPLOYEES_SQL, assert_schema, assert_unused_sequences
 
 
 pytestmark = pytest.mark.usefixtures('schema')
-
-
-@pytest.fixture
-def postgres_backend(postgresql):
-    parameters = postgresql.get_dsn_parameters()
-    return PostgreSQLBackend(
-        dbname=parameters['dbname'],
-        user=parameters['user'],
-        password=None,
-        host=parameters['host'],
-        port=parameters['port'],
-    )
 
 
 class TestRunDump:

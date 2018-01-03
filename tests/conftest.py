@@ -30,6 +30,20 @@ def cursor(postgresql):
     return postgresql.cursor()
 
 
+@pytest.fixture
+def postgres_backend(postgresql):
+    from xdump.postgresql import PostgreSQLBackend
+
+    parameters = postgresql.get_dsn_parameters()
+    return PostgreSQLBackend(
+        dbname=parameters['dbname'],
+        user=parameters['user'],
+        password=None,
+        host=parameters['host'],
+        port=parameters['port'],
+    )
+
+
 def execute_file(cursor, filename):
     with (CURRENT_DIR / filename).open('r') as fd:
         sql = fd.read()

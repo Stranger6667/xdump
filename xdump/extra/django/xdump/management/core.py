@@ -21,7 +21,7 @@ class XDumpCommand(BaseCommand):
             default='default',
         )
         parser.add_argument(
-            '-b',
+            '-b', '--backend',
             action='store',
             dest='backend',
             help='Importable string for custom XDump backend.',

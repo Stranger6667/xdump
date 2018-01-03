@@ -4,6 +4,8 @@ import zipfile
 import pytest
 from django.core.management import call_command
 
+from xdump.postgresql import PostgreSQLBackend
+
 from ..conftest import EMPLOYEES_SQL, assert_schema
 
 
@@ -27,8 +29,7 @@ def setup(settings, postgresql):
     }
 
 
-def test_xdump(archive_filename):
-    call_command('xdump', archive_filename)
+def assert_dump(archive_filename):
     archive = zipfile.ZipFile(archive_filename)
     assert archive.namelist() == [
         'dump/schema.sql', 'dump/sequences.sql', 'dump/data/groups.csv', 'dump/data/employees.csv',
@@ -41,3 +42,30 @@ def test_xdump(archive_filename):
                                                       b'1,John,Doe,,1\n'
     schema = archive.read('dump/schema.sql')
     assert_schema(schema)
+
+
+def test_xdump(archive_filename):
+    call_command('xdump', archive_filename)
+    assert_dump(archive_filename)
+
+
+class CustomBackend(PostgreSQLBackend):
+    pass
+
+
+def test_custom_backend_via_cli(archive_filename):
+    call_command('xdump', archive_filename, backend=f'{CustomBackend.__module__}.{CustomBackend.__name__}')
+    assert_dump(archive_filename)
+
+
+def test_custom_backend_via_config(settings, archive_filename):
+    settings.XDUMP['BACKEND'] = f'{CustomBackend.__module__}.{CustomBackend.__name__}'
+    call_command('xdump', archive_filename)
+    assert_dump(archive_filename)
+
+
+def test_xload(archive_filename, postgres_backend):
+    call_command('xdump', archive_filename)
+    assert postgres_backend.run('SELECT COUNT(*) FROM tickets')[0]['count'] == 5
+    call_command('xload', archive_filename)
+    assert postgres_backend.run('SELECT COUNT(*) FROM tickets')[0]['count'] == 0
