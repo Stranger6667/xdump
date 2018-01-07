@@ -29,7 +29,7 @@ class XDumpCommand(BaseCommand):
             default=None,
         )
 
-    def get_xdump_backend(self, alias='default', backend=None, user=None):
+    def get_xdump_backend(self, alias='default', backend=None):
         configuration = self.get_database_configuration(alias)
         if backend is None:
             if 'BACKEND' in settings.XDUMP:
@@ -42,7 +42,7 @@ class XDumpCommand(BaseCommand):
         backend_class = import_string(backend)
         return backend_class(
             dbname=configuration['NAME'],
-            user=user or configuration.get('USER'),
+            user=configuration.get('USER'),
             password=configuration.get('PASSWORD'),
             host=configuration.get('HOST'),
             port=configuration.get('PORT'),
