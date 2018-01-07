@@ -38,6 +38,7 @@ class XDumpCommand(BaseCommand):
                 backend = {
                     'django.db.backends.postgresql': 'xdump.postgresql.PostgreSQLBackend',
                     'django.db.backends.postgresql_psycopg2': 'xdump.postgresql.PostgreSQLBackend',
+                    'django.db.backends.sqlite': 'xdump.sqlite.SQLiteBackend',
                 }[configuration['ENGINE']]
         backend_class = import_string(backend)
         return backend_class(
