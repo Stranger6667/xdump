@@ -3,6 +3,11 @@ services:
   - postgresql
 addons:
   postgresql: "9.6"
+  apt:
+    sources:
+      - travis-ci/sqlite3
+    packages:
+      - sqlite3
 language: python
 matrix:
   include:
