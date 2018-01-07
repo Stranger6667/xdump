@@ -9,6 +9,10 @@ XDump
    :target: https://codecov.io/github/Stranger6667/xdump?branch=master
    :alt: Coverage Status
 
+.. image:: https://readthedocs.org/projects/xdump/badge/?version=stable
+   :target: http://xdump.readthedocs.io/en/stable/?badge=stable
+   :alt: Documentation Status
+
 .. image:: https://img.shields.io/pypi/v/xdump.svg
     :target: https://pypi.python.org/pypi/xdump
     :alt: Latest PyPI version
