@@ -1,33 +1,17 @@
 # coding: utf-8
+import sqlite3
 import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
-import sqlite3
-
 from xdump.sqlite import SQLiteBackend
+
+from .conftest import EMPLOYEES_SQL
 
 
 CURRENT_DIR = Path(__file__).parent.absolute()
-
-EMPLOYEES_SQL = '''
-WITH RECURSIVE employees_cte AS (
-  SELECT * 
-  FROM recent_employees
-  UNION
-  SELECT E.*
-  FROM employees E
-  INNER JOIN employees_cte ON (employees_cte.manager_id = E.id)
-), recent_employees AS (
-  SELECT * 
-  FROM employees
-  ORDER BY id DESC
-  LIMIT 2
-)
-SELECT * FROM employees_cte
-'''
 
 
 @pytest.fixture
@@ -201,4 +185,3 @@ class TestHighLevelInterface:
         )
         assert result[0]['count'] == 3
         assert sqlite_backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
-

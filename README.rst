@@ -67,6 +67,7 @@ RDBMS support
 At the moment only the following are supported:
 
 - PostgreSQL
+- SQLite
 
 Django support
 ==============
