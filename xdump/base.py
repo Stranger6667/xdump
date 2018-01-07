@@ -40,6 +40,10 @@ class BaseBackend:
             kwargs.setdefault(option, getattr(self, option))
         return kwargs
 
+    def cache_clear(self):
+        self.get_cursor.cache_clear()
+        self.get_connection.cache_clear()
+
     # Low-level commands executors
 
     def run_dump(self, *args, **kwargs):
@@ -118,8 +122,7 @@ class BaseBackend:
             owner = self.user
         self.drop_database(self.dbname)
         self.create_database(self.dbname, owner)
-        self.get_cursor.cache_clear()
-        self.get_connection.cache_clear()
+        self.cache_clear()
 
     def drop_database(self, dbname):
         raise NotImplementedError
