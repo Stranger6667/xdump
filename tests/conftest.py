@@ -53,7 +53,6 @@ class BackendWrapper:
     """
     backend = attr.ib()
     request = attr.ib()
-    vendor = None
 
     def is_database_exists(self, dbname):
         raise NotImplementedError
