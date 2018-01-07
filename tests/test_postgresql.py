@@ -4,15 +4,13 @@ from unittest.mock import patch
 import psycopg2
 import pytest
 
-from tests.conftest import assert_schema, assert_unused_sequences
-
 
 pytestmark = [pytest.mark.postgres, pytest.mark.usefixtures('schema')]
 
 
-def test_write_sequences(backend, archive):
+def test_write_sequences(backend, archive, db_helper):
     backend.write_sequences(archive)
-    assert_unused_sequences(archive)
+    db_helper.assert_unused_sequences(archive)
 
 
 def test_handling_error(backend):
@@ -34,9 +32,11 @@ def test_get_sequences(backend):
     assert backend.get_sequences() == ['groups_id_seq', 'employees_id_seq', 'tickets_id_seq']
 
 
-def test_run_dump(backend):
+def test_run_dump(backend, db_helper):
     schema = backend.run_dump()
-    assert_schema(schema, True)
+    db_helper.assert_schema(schema)
+    for table in ('groups', 'employees', 'tickets'):
+        assert f'COPY {table}'.encode() in schema
 
 
 def test_run_dump_environment(backend):

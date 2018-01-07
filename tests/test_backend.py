@@ -1,23 +1,20 @@
 # coding: utf-8
-import sqlite3
 import zipfile
-from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
-from .conftest import EMPLOYEES_SQL, IS_POSTGRES, IS_SQLITE, assert_schema, assert_unused_sequences
+from .conftest import DATABASE, EMPLOYEES_SQL
 
 
 pytestmark = pytest.mark.usefixtures('schema')
 
 
-def test_dump_schema(backend):
+def test_dump_schema(backend, db_helper):
     """
     Schema should not include any COPY statements.
     """
     output = backend.dump_schema()
-    assert_schema(output)
+    db_helper.assert_schema(output)
 
 
 @pytest.mark.parametrize('sql, expected', (
@@ -33,38 +30,27 @@ def test_export_to_csv(backend, cursor, sql, expected):
 
 class TestRecreating:
 
-    def is_database_exists(self, backend, dbname):
-        if IS_POSTGRES:
-            return backend.run(
-                'SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = %s)', [dbname]
-            )[0]['exists']
-        elif IS_SQLITE:
-            return Path(dbname).exists()
-
-    def test_drop_database(self, backend):
+    def test_drop_database(self, backend, db_helper):
         original_dbname = backend.dbname
         backend.dbname = 'postgres'
-        if IS_POSTGRES:
+        if DATABASE == 'postgres':
             backend.drop_connections(original_dbname)
         backend.drop_database(original_dbname)
-        assert not self.is_database_exists(backend, original_dbname)
+        assert not db_helper.is_database_exists(original_dbname)
 
-    def test_create_database(self, backend, tmpdir):
-        if IS_POSTGRES:
-            dbname = 'test_xxx'
-        elif IS_SQLITE:
-            dbname = str(tmpdir.join('test_xxx.db'))
+    def test_create_database(self, backend, db_helper):
+        dbname = db_helper.get_new_database_name()
         backend.create_database(dbname, backend.user)
-        assert self.is_database_exists(backend, dbname)
+        assert db_helper.is_database_exists(dbname)
 
     @pytest.mark.usefixtures('schema', 'data')
-    def test_recreate_database(self, backend):
+    def test_recreate_database(self, backend, db_helper):
         backend.recreate_database()
-        assert self.is_database_exists(backend, backend.dbname)
+        assert db_helper.is_database_exists(backend.dbname)
 
-    def test_non_existent_db(self, backend):
+    def test_non_existent_db(self, backend, db_helper):
         assert backend.drop_database('not_exists') is None
-        assert not self.is_database_exists(backend, 'not_exists')
+        assert not db_helper.is_database_exists('not_exists')
 
 
 class TestHighLevelInterface:
@@ -73,99 +59,59 @@ class TestHighLevelInterface:
     """
 
     @pytest.fixture
-    def dump(self, backend, archive_filename):
+    def dump(self, backend, archive_filename, data):
         backend.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL})
 
     @pytest.mark.usefixtures('schema', 'dump')
-    def test_dump(self, archive_filename):
-        archive = zipfile.ZipFile(archive_filename)
-        namelist = archive.namelist()
-        if IS_POSTGRES:
-            assert namelist == [
-                'dump/schema.sql', 'dump/sequences.sql', 'dump/data/groups.csv', 'dump/data/employees.csv',
-            ]
-        elif IS_SQLITE:
-            assert namelist == ['dump/schema.sql', 'dump/data/groups.csv', 'dump/data/employees.csv']
-        assert archive.read('dump/data/groups.csv') == b'id,name\n'
-        assert archive.read('dump/data/employees.csv') == b'id,first_name,last_name,manager_id,group_id\n'
-        if IS_POSTGRES:
-            assert_unused_sequences(archive)
-        schema = archive.read('dump/schema.sql')
-        assert_schema(schema)
+    def test_dump(self, db_helper, archive_filename):
+        db_helper.assert_dump(archive_filename)
 
     @pytest.mark.usefixtures('schema', 'data')
-    def test_transaction(self, backend, cursor, archive_filename):
+    def test_transaction(self, backend, archive_filename, db_helper):
         """
         We add extra values to the second table after first table was dumped.
         This data should not appear in the result.
         """
         insert = 'INSERT INTO groups (id, name) VALUES (3,\'test\')'
 
-        class Data:
-            is_loaded = False
-
-            def insert(self, *args, **kwargs):
-                if not self.is_loaded:
-                    if IS_POSTGRES:
-                        cursor.execute(insert)
-                    elif IS_SQLITE:
-                        with pytest.raises(sqlite3.OperationalError, message='database is locked'):
-                            cursor.execute(insert)
-                    self.is_loaded = True
-
-        with patch.object(backend, 'export_to_csv', wraps=backend.export_to_csv,
-                          side_effect=Data().insert):
+        with db_helper.concurrent_insert(insert):
             backend.dump(archive_filename, ['employees', 'groups'], {})
             archive = zipfile.ZipFile(archive_filename)
-            assert archive.read('dump/data/groups.csv') == b'id,name\n1,Admin\n2,User\n'
-        backend.get_cursor.cache_clear()
-        backend.get_connection.cache_clear()
-        if IS_SQLITE:
+            db_helper.assert_groups(archive)
+        backend.cache_clear()
+        if DATABASE == 'sqlite':
             backend.run(insert)
         assert backend.run('SELECT COUNT(*) AS "count" FROM groups')[0]['count'] == 3
 
     @pytest.mark.usefixtures('schema', 'data', 'dump')
-    def test_load(self, backend, archive_filename):
+    def test_load(self, backend, archive_filename, db_helper):
         backend.recreate_database()
         backend.load(archive_filename)
-        if IS_POSTGRES:
-            result = backend.run(
-                "SELECT COUNT(*) FROM pg_tables WHERE tablename IN ('groups', 'employees', 'tickets')"
-            )
-        elif IS_SQLITE:
-            result = backend.run(
-                "SELECT COUNT(*) AS 'count' "
-                "FROM sqlite_master WHERE type='table' AND name IN ('groups', 'employees', 'tickets')"
-            )
-        assert result[0]['count'] == 3
+        assert db_helper.get_tables_count() == 3
         assert backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
-        if IS_POSTGRES:
+        if DATABASE == 'postgres':
             result = backend.run("SELECT currval('groups_id_seq')")
             assert result[0]['currval'] == 2
 
 
-def test_write_schema(backend, archive):
+def test_write_schema(backend, db_helper, archive):
     backend.write_schema(archive)
     schema = archive.read('dump/schema.sql')
-    assert_schema(schema)
+    db_helper.assert_schema(schema)
 
 
 @pytest.mark.usefixtures('schema', 'data')
-def test_write_partial_tables(backend, archive):
+def test_write_partial_tables(backend, archive, db_helper):
     """
     Here we need to select two latest employees with all related managers.
     In that case - John Black will not be in the output.
     """
     backend.write_partial_tables(archive, {'employees': EMPLOYEES_SQL})
-    assert archive.read('dump/data/employees.csv') == b'id,first_name,last_name,manager_id,group_id\n' \
-                                                      b'5,John,Snow,3,2\n' \
-                                                      b'4,John,Brown,3,2\n' \
-                                                      b'3,John,Smith,1,1\n' \
-                                                      b'1,John,Doe,,1\n'
+    db_helper.assert_employees(archive)
 
 
 @pytest.mark.usefixtures('schema', 'data')
-def test_write_full_tables(backend, archive):
+def test_write_full_tables(backend, archive, db_helper):
     backend.write_full_tables(archive, ['groups'])
-    assert archive.read('dump/data/groups.csv') == b'id,name\n1,Admin\n2,User\n'
+    db_helper.assert_groups(archive)
     assert archive.namelist() == ['dump/data/groups.csv']
