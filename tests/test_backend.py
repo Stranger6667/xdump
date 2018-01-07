@@ -4,7 +4,6 @@ import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
-import psycopg2
 import pytest
 
 from .conftest import EMPLOYEES_SQL, IS_POSTGRES, IS_SQLITE, assert_schema, assert_unused_sequences
@@ -13,50 +12,12 @@ from .conftest import EMPLOYEES_SQL, IS_POSTGRES, IS_SQLITE, assert_schema, asse
 pytestmark = pytest.mark.usefixtures('schema')
 
 
-class TestRunDump:
-
-    @pytest.mark.postgres
-    def test_run_dump(self, backend):
-        schema = backend.run_dump()
-        assert_schema(schema, True)
-
-    @pytest.mark.postgres
-    def test_run_dump_environment(self, backend):
-        backend.password = 'PASSW'
-        assert backend.run_dump_environment['PGPASSWORD'] == backend.password
-
-    @pytest.mark.postgres
-    def test_run_dump_environment_empty_password(self, backend):
-        assert 'PGPASSWORD' not in backend.run_dump_environment
-
-    def test_dump_schema(self, backend):
-        """
-        Schema should not include any COPY statements.
-        """
-        output = backend.dump_schema()
-        assert_schema(output)
-
-
-@pytest.mark.postgres
-def test_get_sequences(backend):
-    assert backend.get_sequences() == ['groups_id_seq', 'employees_id_seq', 'tickets_id_seq']
-
-
-@pytest.mark.parametrize('sql, expected', (
-    ('INSERT INTO groups (name) VALUES (\'test\')', 1),
-    ('INSERT INTO groups (name) VALUES (\'test\'), (\'test2\')', 2),
-))
-@pytest.mark.postgres
-def test_dump_sequences(backend, cursor, sql, expected):
-    cursor.execute(sql)
-    assert f"SELECT pg_catalog.setval('groups_id_seq', {expected}, true);".encode() in backend.dump_sequences()
-
-
-@pytest.mark.postgres
-def test_handling_error(backend):
-    with patch('psycopg2.extras.DictCursorBase.fetchall', side_effect=psycopg2.ProgrammingError), \
-            pytest.raises(psycopg2.ProgrammingError):
-        backend.run('BEGIN')
+def test_dump_schema(backend):
+    """
+    Schema should not include any COPY statements.
+    """
+    output = backend.dump_schema()
+    assert_schema(output)
 
 
 @pytest.mark.parametrize('sql, expected', (
@@ -181,12 +142,6 @@ class TestHighLevelInterface:
         if IS_POSTGRES:
             result = backend.run("SELECT currval('groups_id_seq')")
             assert result[0]['currval'] == 2
-
-
-@pytest.mark.postgres
-def test_write_sequences(backend, archive):
-    backend.write_sequences(archive)
-    assert_unused_sequences(archive)
 
 
 def test_write_schema(backend, archive):
