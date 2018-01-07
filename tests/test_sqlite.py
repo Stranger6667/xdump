@@ -43,7 +43,7 @@ def data(cursor):
 
 
 @pytest.fixture
-def sqlite_backend(dbname):
+def backend(dbname):
     return SQLiteBackend(
         dbname=dbname,
         user=None,
@@ -61,13 +61,13 @@ def assert_schema(schema):
         assert f'CREATE TABLE {table}'.encode() in schema
 
 
-def test_dump_schema(sqlite_backend):
-    schema = sqlite_backend.dump_schema()
+def test_dump_schema(backend):
+    schema = backend.dump_schema()
     assert_schema(schema)
 
 
-def test_write_schema(sqlite_backend, archive):
-    sqlite_backend.write_schema(archive)
+def test_write_schema(backend, archive):
+    backend.write_schema(archive)
     schema = archive.read('dump/schema.sql')
     assert_schema(schema)
 
@@ -77,19 +77,19 @@ def test_write_schema(sqlite_backend, archive):
     ('INSERT INTO groups (id, name) VALUES (3, \'test\')', b'id,name\n1,Admin\n2,User\n3,test\n'),
 ))
 @pytest.mark.usefixtures('schema', 'data')
-def test_export_to_csv(sqlite_backend, cursor, sql, expected):
+def test_export_to_csv(backend, cursor, sql, expected):
     if sql:
         cursor.execute(sql)
-    assert sqlite_backend.export_to_csv('SELECT * FROM groups') == expected
+    assert backend.export_to_csv('SELECT * FROM groups') == expected
 
 
 @pytest.mark.usefixtures('schema', 'data')
-def test_write_partial_tables(sqlite_backend, archive):
+def test_write_partial_tables(backend, archive):
     """
     Here we need to select two latest employees with all related managers.
     In that case - John Black will not be in the output.
     """
-    sqlite_backend.write_partial_tables(archive, {'employees': EMPLOYEES_SQL})
+    backend.write_partial_tables(archive, {'employees': EMPLOYEES_SQL})
     assert archive.read('dump/data/employees.csv') == b'id,first_name,last_name,manager_id,group_id\n' \
                                                       b'5,John,Snow,3,2\n' \
                                                       b'4,John,Brown,3,2\n' \
@@ -98,8 +98,8 @@ def test_write_partial_tables(sqlite_backend, archive):
 
 
 @pytest.mark.usefixtures('schema', 'data')
-def test_write_full_tables(sqlite_backend, archive):
-    sqlite_backend.write_full_tables(archive, ['groups'])
+def test_write_full_tables(backend, archive):
+    backend.write_full_tables(archive, ['groups'])
     assert archive.read('dump/data/groups.csv') == b'id,name\n1,Admin\n2,User\n'
     assert archive.namelist() == ['dump/data/groups.csv']
 
@@ -109,22 +109,22 @@ class TestRecreating:
     def is_database_exists(self, dbname):
         return Path(dbname).exists()
 
-    def test_drop_database(self, sqlite_backend, dbname):
-        sqlite_backend.drop_database(dbname)
+    def test_drop_database(self, backend, dbname):
+        backend.drop_database(dbname)
         assert not self.is_database_exists(dbname)
 
-    def test_non_existent_db(self, sqlite_backend):
-        assert sqlite_backend.drop_database('not_exists') is None
+    def test_non_existent_db(self, backend):
+        assert backend.drop_database('not_exists') is None
         assert not self.is_database_exists('not_exists')
 
-    def test_create_database(self, tmpdir, sqlite_backend):
+    def test_create_database(self, tmpdir, backend):
         dbname = str(tmpdir.join('test_xxx.db'))
-        sqlite_backend.create_database(dbname)
+        backend.create_database(dbname)
         assert self.is_database_exists(dbname)
 
     @pytest.mark.usefixtures('schema', 'data')
-    def test_recreate_database(self, sqlite_backend, dbname):
-        sqlite_backend.recreate_database()
+    def test_recreate_database(self, backend, dbname):
+        backend.recreate_database()
         assert self.is_database_exists(dbname)
 
 
@@ -134,8 +134,8 @@ class TestHighLevelInterface:
     """
 
     @pytest.fixture
-    def dump(self, sqlite_backend, archive_filename):
-        sqlite_backend.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL})
+    def dump(self, backend, archive_filename):
+        backend.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL})
 
     @pytest.mark.usefixtures('schema', 'data', 'dump')
     def test_dump(self, archive_filename):
@@ -151,7 +151,7 @@ class TestHighLevelInterface:
         assert_schema(schema)
 
     @pytest.mark.usefixtures('schema', 'data')
-    def test_transaction(self, sqlite_backend, cursor, archive_filename):
+    def test_transaction(self, backend, cursor, archive_filename):
         """
         We add extra values to the second table after first table was dumped.
         This data should not appear in the result.
@@ -167,21 +167,21 @@ class TestHighLevelInterface:
                         cursor.execute(insert)
                     self.is_loaded = True
 
-        with patch.object(sqlite_backend, 'export_to_csv', wraps=sqlite_backend.export_to_csv,
+        with patch.object(backend, 'export_to_csv', wraps=backend.export_to_csv,
                           side_effect=Data().insert):
-            sqlite_backend.dump(archive_filename, ['employees', 'groups'], {})
+            backend.dump(archive_filename, ['employees', 'groups'], {})
             archive = zipfile.ZipFile(archive_filename)
             assert archive.read('dump/data/groups.csv') == b'id,name\n1,Admin\n2,User\n'
-        sqlite_backend.run(insert)
-        assert sqlite_backend.run('SELECT COUNT(*) AS "count" FROM groups')[0]['count'] == 3
+        backend.run(insert)
+        assert backend.run('SELECT COUNT(*) AS "count" FROM groups')[0]['count'] == 3
 
     @pytest.mark.usefixtures('schema', 'data', 'dump')
-    def test_load(self, sqlite_backend, archive_filename):
-        sqlite_backend.recreate_database()
-        sqlite_backend.load(archive_filename)
-        result = sqlite_backend.run(
+    def test_load(self, backend, archive_filename):
+        backend.recreate_database()
+        backend.load(archive_filename)
+        result = backend.run(
             "SELECT COUNT(*) AS 'count' "
             "FROM sqlite_master WHERE type='table' AND name IN ('groups', 'employees', 'tickets')"
         )
         assert result[0]['count'] == 3
-        assert sqlite_backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
+        assert backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]

@@ -64,8 +64,8 @@ def test_custom_backend_via_config(settings, archive_filename):
     assert_dump(archive_filename)
 
 
-def test_xload(archive_filename, postgres_backend):
+def test_xload(archive_filename, backend):
     call_command('xdump', archive_filename)
-    assert postgres_backend.run('SELECT COUNT(*) FROM tickets')[0]['count'] == 5
+    assert backend.run('SELECT COUNT(*) FROM tickets')[0]['count'] == 5
     call_command('xload', archive_filename)
-    assert postgres_backend.run('SELECT COUNT(*) FROM tickets')[0]['count'] == 0
+    assert backend.run('SELECT COUNT(*) FROM tickets')[0]['count'] == 0

@@ -28,11 +28,8 @@ SELECT * FROM employees_cte
 
 
 if 'TRAVIS' in os.environ:
-    POSTGRESQL_VERSION = '9.6'
-    postgresql_proc = factories.postgresql_proc(executable=f'/usr/lib/postgresql/{POSTGRESQL_VERSION}/bin/pg_ctl')
+    postgresql_proc = factories.postgresql_proc(executable=f'/usr/lib/postgresql/9.6/bin/pg_ctl')
     postgresql = factories.postgresql('postgresql_proc')
-else:
-    POSTGRESQL_VERSION = '10.1'
 
 
 @pytest.fixture
@@ -42,7 +39,7 @@ def cursor(postgresql):
 
 
 @pytest.fixture
-def postgres_backend(postgresql):
+def backend(postgresql):
     from xdump.postgresql import PostgreSQLBackend
 
     parameters = postgresql.get_dsn_parameters()
@@ -83,7 +80,6 @@ def archive(archive_filename):
 
 
 def assert_schema(schema, with_data=False):
-    assert f'Dumped from database version {POSTGRESQL_VERSION}'.encode() in schema
     assert b'CREATE TABLE groups' in schema
     for table in ('groups', 'employees', 'tickets'):
         assert (f'COPY {table}'.encode() in schema) is with_data
