@@ -3,11 +3,6 @@ services:
   - postgresql
 addons:
   postgresql: "9.6"
-  apt:
-    sources:
-      - travis-ci/sqlite3
-    packages:
-      - sqlite3
 language: python
 matrix:
   include:
@@ -20,6 +15,7 @@ matrix:
 script:
   - tox -e $TOX_ENV
 before_install:
+  - sudo add-apt-repository ppa:jonathonf/backports
   - sudo apt-get update
   - sudo apt-get install --only-upgrade sqlite3
   - sudo sqlite3 -version
