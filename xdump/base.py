@@ -99,7 +99,7 @@ class BaseBackend:
         Writes a complete tables dump to the archive.
         """
         for table_name in tables:
-            self.write_data_file(file, table_name, f'SELECT * FROM {table_name}')
+            self.write_data_file(file, table_name, 'SELECT * FROM {0}'.format(table_name))
 
     def write_partial_tables(self, file, config):
         for table_name, sql in config.items():
@@ -107,7 +107,7 @@ class BaseBackend:
 
     def write_data_file(self, file, table_name, sql):
         data = self.export_to_csv(sql)
-        file.writestr(f'{self.data_dir}{table_name}.csv', data)
+        file.writestr('{0}{1}.csv'.format(self.data_dir, table_name), data)
 
     def export_to_csv(self, sql):
         raise NotImplementedError

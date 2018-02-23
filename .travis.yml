@@ -15,6 +15,12 @@ matrix:
     - python: 3.6
       env:
       - TOX_ENV=py36-sqlite
+    - python: 3.5
+      env:
+      - TOX_ENV=py35-postgres
+    - python: 3.5
+      env:
+      - TOX_ENV=py35-sqlite
 script:
   - tox -e $TOX_ENV
 before_install:

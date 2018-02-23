@@ -36,7 +36,7 @@ def test_run_dump(backend, db_helper):
     schema = backend.run_dump()
     db_helper.assert_schema(schema)
     for table in ('groups', 'employees', 'tickets'):
-        assert f'COPY {table}'.encode() in schema
+        assert 'COPY {0}'.format(table).encode() in schema
 
 
 def test_run_dump_environment(backend):

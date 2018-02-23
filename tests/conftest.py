@@ -37,7 +37,7 @@ IS_SQLITE = DATABASE == 'sqlite'
 if IS_POSTGRES and 'TRAVIS' in os.environ:
     from pytest_postgresql import factories
 
-    postgresql_proc = factories.postgresql_proc(executable=f'/usr/lib/postgresql/9.6/bin/pg_ctl')
+    postgresql_proc = factories.postgresql_proc(executable='/usr/lib/postgresql/9.6/bin/pg_ctl')
     postgresql = factories.postgresql('postgresql_proc')
 
 
@@ -94,7 +94,7 @@ class BackendWrapper:
 
     def assert_schema(self, schema):
         for table in ('groups', 'employees', 'tickets'):
-            assert f'CREATE TABLE {table}'.encode() in schema
+            assert 'CREATE TABLE {0}'.format(table).encode() in schema
 
     def assert_dump(self, archive_filename):
         archive = zipfile.ZipFile(archive_filename)
@@ -248,7 +248,7 @@ def data(execute_file):
 
 def pytest_runtest_setup(item):
     if isinstance(item, item.Function) and not item.get_marker(DATABASE) and ALL.intersection(item.keywords):
-        pytest.skip(f'Cannot run on {DATABASE}')
+        pytest.skip('Cannot run on {0}'.format(DATABASE))
 
 
 @pytest.fixture

@@ -85,6 +85,6 @@ class SQLiteBackend(BaseBackend):
         placeholders = ('?,' * len(reader.fieldnames))[:-1]
         cursor = self.get_cursor()
         cursor.executemany(
-            f'INSERT INTO {table_name} ({fields}) VALUES ({placeholders})',
+            'INSERT INTO {0} ({1}) VALUES ({2})'.format(table_name, fields, placeholders),
             [[line[k] for k in reader.fieldnames] for line in reader]
         )
