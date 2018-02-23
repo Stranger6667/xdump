@@ -78,9 +78,10 @@ class TestHighLevelInterface:
             backend.dump(archive_filename, ['employees', 'groups'], {})
             archive = zipfile.ZipFile(archive_filename)
             db_helper.assert_groups(archive)
-        backend.cache_clear()
         if DATABASE == 'sqlite':
             backend.run(insert)
+        else:
+            backend.cache_clear()
         assert backend.run('SELECT COUNT(*) AS "count" FROM groups')[0]['count'] == 3
 
     @pytest.mark.usefixtures('schema', 'data', 'dump')

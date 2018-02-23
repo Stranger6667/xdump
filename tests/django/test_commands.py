@@ -45,12 +45,12 @@ elif IS_SQLITE:
 
 
 def test_custom_backend_via_cli(archive_filename, db_helper):
-    call_command('xdump', archive_filename, backend=f'{CustomBackend.__module__}.{CustomBackend.__name__}')
+    call_command('xdump', archive_filename, backend=CustomBackend.__module__ + '.' + CustomBackend.__name__)
     db_helper.assert_dump(archive_filename)
 
 
 def test_custom_backend_via_config(settings, db_helper, archive_filename):
-    settings.XDUMP['BACKEND'] = f'{CustomBackend.__module__}.{CustomBackend.__name__}'
+    settings.XDUMP['BACKEND'] = CustomBackend.__module__ + '.' + CustomBackend.__name__
     call_command('xdump', archive_filename)
     db_helper.assert_dump(archive_filename)
 

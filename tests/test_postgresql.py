@@ -25,7 +25,7 @@ def test_handling_error(backend):
 ))
 def test_dump_sequences(backend, cursor, sql, expected):
     cursor.execute(sql)
-    assert f"SELECT pg_catalog.setval('groups_id_seq', {expected}, true);".encode() in backend.dump_sequences()
+    assert "SELECT pg_catalog.setval('groups_id_seq', {0}, true);".format(expected).encode() in backend.dump_sequences()
 
 
 def test_get_sequences(backend):
@@ -36,7 +36,7 @@ def test_run_dump(backend, db_helper):
     schema = backend.run_dump()
     db_helper.assert_schema(schema)
     for table in ('groups', 'employees', 'tickets'):
-        assert f'COPY {table}'.encode() in schema
+        assert 'COPY {0}'.format(table).encode() in schema
 
 
 def test_run_dump_environment(backend):

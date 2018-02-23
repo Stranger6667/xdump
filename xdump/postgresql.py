@@ -45,20 +45,20 @@ class PostgreSQLBackend(BaseBackend):
 
     @property
     def run_dump_environment(self):
+        environ = os.environ.copy()
         if self.password:
-            return {**os.environ, 'PGPASSWORD': self.password}
-        return os.environ.copy()
+            environ['PGPASSWORD'] = self.password
+        return environ
 
     def run_dump(self, *args, **kwargs):
         process = subprocess.Popen(
-            [
+            (
                 'pg_dump',
                 '-U', self.user,
                 '-h', self.host,
                 '-p', self.port,
                 '-d', self.dbname,
-                *args,
-            ],
+            ) + args,
             stdout=subprocess.PIPE,
             env=self.run_dump_environment
         )
@@ -103,7 +103,7 @@ class PostgreSQLBackend(BaseBackend):
         Exports the result of the given sql to CSV with a help of COPY statement.
         """
         with BytesIO() as output:
-            self.copy_expert(f'COPY ({sql}) TO STDOUT WITH CSV HEADER', output)
+            self.copy_expert('COPY ({0}) TO STDOUT WITH CSV HEADER'.format(sql), output)
             return output.getvalue()
 
     def recreate_database(self, owner=None):
@@ -114,10 +114,10 @@ class PostgreSQLBackend(BaseBackend):
         self.run('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s', [dbname], 'maintenance')
 
     def drop_database(self, dbname):
-        self.run(f'DROP DATABASE IF EXISTS {dbname}', using='maintenance')
+        self.run('DROP DATABASE IF EXISTS {0}'.format(dbname), using='maintenance')
 
     def create_database(self, dbname, owner):
-        self.run(f"CREATE DATABASE {dbname} WITH OWNER {owner}", using='maintenance')
+        self.run('CREATE DATABASE {0} WITH OWNER {1}'.format(dbname, owner), using='maintenance')
 
     def load_data_file(self, table_name, fd):
-        self.copy_expert(f'COPY {table_name} FROM STDIN WITH CSV HEADER', fd)
+        self.copy_expert('COPY {0} FROM STDIN WITH CSV HEADER'.format(table_name), fd)
