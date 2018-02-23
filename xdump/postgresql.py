@@ -45,9 +45,10 @@ class PostgreSQLBackend(BaseBackend):
 
     @property
     def run_dump_environment(self):
+        environ = os.environ.copy()
         if self.password:
-            return {**os.environ, 'PGPASSWORD': self.password}
-        return os.environ.copy()
+            environ['PGPASSWORD'] = self.password
+        return environ
 
     def run_dump(self, *args, **kwargs):
         process = subprocess.Popen(
