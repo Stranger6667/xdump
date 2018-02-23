@@ -26,7 +26,7 @@ class SQLiteBackend(BaseBackend):
         return connection
 
     def run_dump(self, *args, **kwargs):
-        process = subprocess.Popen(['sqlite3', *args], stdout=subprocess.PIPE)
+        process = subprocess.Popen(('sqlite3', ) + args, stdout=subprocess.PIPE)
         return process.communicate()[0]
 
     def run(self, sql, params=(), using='default'):
