@@ -6,6 +6,11 @@ Changelog
 `Unreleased`_
 -------------
 
+Added
+~~~~~
+
+- Support for Python 3.4 & 3.5. `#7`_
+
 `0.2.0`_ - 2018-01-07
 ---------------------
 
@@ -41,3 +46,4 @@ Fixed
 .. _0.1.1: https://github.com/Stranger6667/xdump/compare/0.1.0...0.1.1
 
 .. _#8: https://github.com/Stranger6667/xdump/issues/8
+.. _#7: https://github.com/Stranger6667/xdump/issues/7
