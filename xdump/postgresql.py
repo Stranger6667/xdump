@@ -52,14 +52,13 @@ class PostgreSQLBackend(BaseBackend):
 
     def run_dump(self, *args, **kwargs):
         process = subprocess.Popen(
-            [
+            (
                 'pg_dump',
                 '-U', self.user,
                 '-h', self.host,
                 '-p', self.port,
                 '-d', self.dbname,
-                *args,
-            ],
+            ) + args,
             stdout=subprocess.PIPE,
             env=self.run_dump_environment
         )
