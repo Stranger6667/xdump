@@ -80,6 +80,8 @@ class TestHighLevelInterface:
             db_helper.assert_groups(archive)
         if DATABASE == 'sqlite':
             backend.run(insert)
+        else:
+            backend.cache_clear()
         assert backend.run('SELECT COUNT(*) AS "count" FROM groups')[0]['count'] == 3
 
     @pytest.mark.usefixtures('schema', 'data', 'dump')
