@@ -142,4 +142,4 @@ And usage is:
 Python support
 ==============
 
-XDump supports only Python 3.6 at the moment (but the supported versions list will be extended in the future).
+XDump supports Python 3.4, 3.5 & 3.6.
