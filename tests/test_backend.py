@@ -152,3 +152,23 @@ class TestAutoSelect:
         backend.dump(archive_filename, ['employees'], {})
         archive = zipfile.ZipFile(archive_filename)
         db_helper.assert_groups(archive)
+
+    def test_recursive_relation(self, backend, archive_filename):
+        backend.dump(archive_filename, [], {'employees': 'SELECT * FROM employees WHERE id = 2'})
+        archive = zipfile.ZipFile(archive_filename)
+        assert archive.read(
+            'dump/data/employees.csv'
+        ) == b'id,first_name,last_name,manager_id,group_id\n2,John,Black,1,1\n1,John,Doe,,1\n'
+        self.assert_groups(archive)
+
+    def test_long_recursive_relation(self, backend, archive_filename):
+        backend.dump(archive_filename, [], {'tickets': 'SELECT * FROM tickets WHERE id = 2'})
+        archive = zipfile.ZipFile(archive_filename)
+        assert archive.read('dump/data/tickets.csv') == b'id,author_id,subject,message\n2,2,Sub 2,Message 2\n'
+        assert archive.read(
+            'dump/data/employees.csv'
+        ) == b'id,first_name,last_name,manager_id,group_id\n2,John,Black,1,1\n1,John,Doe,,1\n'
+        self.assert_groups(archive)
+        self.assert_groups(archive)
+
+    # TODO. Test multiple recursive relations

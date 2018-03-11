@@ -104,6 +104,11 @@ class BaseBackend:
                     partial_tables[foreign_table] = sql
                 # Now we select more than before for given table, so we have to do check related data for it.
                 self.update_partial_tables(foreign_table, full_tables, partial_tables)
+        for foreign_key in self.run(RECURSIVE_RELATIONS_QUERY, {'table_name': table, 'full_tables': list(full_tables)}):
+            if table in partial_tables:
+                # TODO. The query will be overwritten if there are 2 or more recursive references
+                query = RECURSIVE_QUERY_TEMPLATE.format(source=partial_tables[table], target=table, **foreign_key)
+                partial_tables[table] = query
 
     @property
     def tables(self):
@@ -239,4 +244,32 @@ WHERE
     tc.table_name != ccu.table_name AND
     tc.table_name = %(table_name)s AND
     NOT(ccu.table_name = ANY(%(full_tables)s))
+'''
+RECURSIVE_RELATIONS_QUERY = '''
+SELECT
+    tc.constraint_name, tc.table_name, kcu.column_name,
+    ccu.table_name AS foreign_table_name,
+    ccu.column_name AS foreign_column_name
+FROM
+    information_schema.table_constraints AS tc
+    JOIN information_schema.key_column_usage AS kcu
+      ON tc.constraint_name = kcu.constraint_name
+    JOIN information_schema.constraint_column_usage AS ccu
+      ON ccu.constraint_name = tc.constraint_name
+WHERE
+    constraint_type = 'FOREIGN KEY' AND
+    tc.table_name = ccu.table_name AND
+    tc.table_name = %(table_name)s AND
+    NOT(ccu.table_name = ANY(%(full_tables)s))
+'''
+
+RECURSIVE_QUERY_TEMPLATE = '''
+WITH RECURSIVE recursive_cte AS (
+  {source}
+  UNION
+  SELECT T.*
+  FROM {table_name} T
+  INNER JOIN recursive_cte ON (recursive_cte.{column_name} = T.{foreign_column_name})
+)
+SELECT * FROM recursive_cte
 '''
