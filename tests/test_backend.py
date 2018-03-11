@@ -116,3 +116,39 @@ def test_write_full_tables(backend, archive, db_helper):
     backend.write_full_tables(archive, ['groups'])
     db_helper.assert_groups(archive)
     assert archive.namelist() == ['dump/data/groups.csv']
+
+
+@pytest.mark.usefixtures('schema', 'data')
+class TestAutoSelect:
+
+    def assert_employee(self, archive):
+        assert archive.read(
+            'dump/data/employees.csv'
+        ) == b'id,first_name,last_name,manager_id,group_id\n1,John,Doe,,1\n'
+
+    def assert_groups(self, archive):
+        assert archive.read('dump/data/groups.csv') == b'id,name\n1,Admin\n'
+
+    def test_related_table(self, backend, archive_filename):
+        backend.dump(archive_filename, [], {'employees': 'SELECT * FROM employees WHERE id = 1'})
+        archive = zipfile.ZipFile(archive_filename)
+        self.assert_employee(archive)
+        self.assert_groups(archive)
+
+    def test_full_tables_handling(self, backend, db_helper, archive_filename):
+        backend.dump(archive_filename, ['groups'], {'employees': 'SELECT * FROM employees WHERE id = 1'})
+        archive = zipfile.ZipFile(archive_filename)
+        self.assert_employee(archive)
+        db_helper.assert_groups(archive)
+
+    def test_long_relation(self, backend, archive_filename):
+        backend.dump(archive_filename, [], {'tickets': 'SELECT * FROM tickets WHERE id = 1'})
+        archive = zipfile.ZipFile(archive_filename)
+        assert archive.read('dump/data/tickets.csv') == b'id,author_id,subject,message\n1,1,Sub 1,Message 1\n'
+        self.assert_employee(archive)
+        self.assert_groups(archive)
+
+    def test_related_to_full(self, backend, archive_filename, db_helper):
+        backend.dump(archive_filename, ['employees'], {})
+        archive = zipfile.ZipFile(archive_filename)
+        db_helper.assert_groups(archive)

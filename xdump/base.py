@@ -81,8 +81,61 @@ class BaseBackend:
         partial_tables = partial_tables or {}
         with zipfile.ZipFile(filename, 'w', zipfile.ZIP_DEFLATED) as file:
             self.write_initial_setup(file)
+            self.add_related_data(full_tables, partial_tables)
             self.write_full_tables(file, full_tables)
             self.write_partial_tables(file, partial_tables)
+
+    def add_related_data(self, full_tables, partial_tables):
+        """
+        Updates selects for partial tables to grab all objects, that are referenced by full / partial tables.
+        """
+        for table in self.tables:
+            self.update_partial_tables(table, full_tables, partial_tables)
+
+    def update_partial_tables(self, table, full_tables, partial_tables):
+        for foreign_key in self.get_foreign_keys(table, full_tables):
+            sql = self.get_related_data_sql(foreign_key, full_tables, partial_tables)
+            if sql:
+                foreign_table = foreign_key['foreign_table_name']
+                if foreign_table in partial_tables:
+                    partial_tables[foreign_table] += f'UNION {sql}'
+                else:
+                    partial_tables[foreign_table] = sql
+                # Now we select more than before for given table, so we have to do check related data for it.
+                self.update_partial_tables(foreign_table, full_tables, partial_tables)
+
+    @property
+    def tables(self):
+        """
+        All non-system tables.
+        """
+        for result in self.run(SELECTABLE_TABLES_SQL):
+            yield result['table_name']
+
+    def get_foreign_keys(self, table, full_tables=()):
+        """
+        Looks for foreign keys in the given table. Excluding ones, that will be dumped in ``full_tables``. TODO. Remove?
+        """
+        return self.run(NON_RECURSIVE_RELATIONS_QUERY, {'table_name': table, 'full_tables': list(full_tables)})
+
+    def get_related_data_sql(self, foreign_key, full_tables, partial_tables):
+        """
+        Generates SQL to select related data, that is referred from another table.
+        """
+        table_name = foreign_key['table_name']
+        if table_name in full_tables:
+            source = foreign_key["table_name"]
+        elif table_name in partial_tables:
+            source = f'({partial_tables[table_name]}) T'
+        else:
+            return
+        return f'''
+            SELECT 
+                * 
+            FROM {foreign_key['foreign_table_name']} 
+            WHERE {foreign_key['foreign_column_name']} IN (
+                SELECT {foreign_key['column_name']} FROM {source}
+            )'''
 
     def write_initial_setup(self, file):
         self.write_schema(file)
@@ -167,3 +220,29 @@ class BaseBackend:
         Loads a data file into the database.
         """
         raise NotImplementedError
+
+
+SELECTABLE_TABLES_SQL = '''
+SELECT table_name
+FROM information_schema.tables
+WHERE
+    table_schema NOT IN ('pg_catalog', 'information_schema') AND
+    table_schema NOT LIKE 'pg_toast%'
+'''
+NON_RECURSIVE_RELATIONS_QUERY = '''
+SELECT
+    tc.constraint_name, tc.table_name, kcu.column_name,
+    ccu.table_name AS foreign_table_name,
+    ccu.column_name AS foreign_column_name
+FROM
+    information_schema.table_constraints AS tc
+    JOIN information_schema.key_column_usage AS kcu
+      ON tc.constraint_name = kcu.constraint_name
+    JOIN information_schema.constraint_column_usage AS ccu
+      ON ccu.constraint_name = tc.constraint_name
+WHERE 
+    constraint_type = 'FOREIGN KEY' AND 
+    tc.table_name != ccu.table_name AND 
+    tc.table_name = %(table_name)s AND 
+    NOT(ccu.table_name = ANY(%(full_tables)s));
+'''
