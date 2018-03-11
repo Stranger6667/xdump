@@ -98,7 +98,7 @@ class BaseBackend:
             if sql:
                 foreign_table = foreign_key['foreign_table_name']
                 if foreign_table in partial_tables:
-                    partial_tables[foreign_table] += f'UNION {sql}'
+                    partial_tables[foreign_table] += 'UNION ' + sql
                 else:
                     partial_tables[foreign_table] = sql
                 # Now we select more than before for given table, so we have to do check related data for it.
@@ -126,16 +126,16 @@ class BaseBackend:
         if table_name in full_tables:
             source = foreign_key["table_name"]
         elif table_name in partial_tables:
-            source = f'({partial_tables[table_name]}) T'
+            source = '({}) T'.format(partial_tables[table_name])
         else:
             return
-        return f'''
+        return '''
             SELECT 
                 * 
-            FROM {foreign_key['foreign_table_name']} 
-            WHERE {foreign_key['foreign_column_name']} IN (
-                SELECT {foreign_key['column_name']} FROM {source}
-            )'''
+            FROM {foreign_table_name} 
+            WHERE {foreign_column_name} IN (
+                SELECT {column_name} FROM {source}
+            )'''.format(source=source, **foreign_key)
 
     def write_initial_setup(self, file):
         self.write_schema(file)
