@@ -19,7 +19,7 @@ def force_string(value):
 
 
 class SQLiteBackend(BaseBackend):
-    tables_sql = "SELECT name AS table_name FROM my_db.sqlite_master WHERE type='table'"
+    tables_sql = "SELECT name AS table_name FROM sqlite_master WHERE type='table'"
 
     def connect(self, *args, **kwargs):
         connection = sqlite3.connect(self.dbname)
@@ -38,10 +38,6 @@ class SQLiteBackend(BaseBackend):
         sql = force_string(sql)
         cursor = self.get_cursor()
         cursor.executescript(sql)
-
-    @property
-    def tables(self):
-        return "SELECT name FROM my_db.sqlite_master WHERE type='table';"
 
     def dump(self, *args, **kwargs):
         cursor = self.get_cursor()
