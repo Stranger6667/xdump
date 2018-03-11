@@ -26,6 +26,13 @@ class PostgreSQLBackend(BaseBackend):
             'isolation_level': ISOLATION_LEVEL_AUTOCOMMIT,
         }
     }
+    tables_sql = '''
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE
+        table_schema NOT IN ('pg_catalog', 'information_schema') AND
+        table_schema NOT LIKE 'pg_toast%'
+    '''
 
     def connect(self, isolation_level, **kwargs):
         kwargs = self.get_connection_kwargs(**kwargs)

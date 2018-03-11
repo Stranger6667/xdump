@@ -18,6 +18,7 @@ class BaseBackend:
     schema_filename = 'dump/schema.sql'
     initial_setup_files = (schema_filename, )
     data_dir = 'dump/data/'
+    tables_sql = None
 
     # Connection
 
@@ -109,7 +110,7 @@ class BaseBackend:
         """
         All non-system tables.
         """
-        for result in self.run(SELECTABLE_TABLES_SQL):
+        for result in self.run(self.tables_sql):
             yield result['table_name']
 
     def get_foreign_keys(self, table, full_tables=()):
@@ -222,13 +223,6 @@ class BaseBackend:
         raise NotImplementedError
 
 
-SELECTABLE_TABLES_SQL = '''
-SELECT table_name
-FROM information_schema.tables
-WHERE
-    table_schema NOT IN ('pg_catalog', 'information_schema') AND
-    table_schema NOT LIKE 'pg_toast%'
-'''
 NON_RECURSIVE_RELATIONS_QUERY = '''
 SELECT
     tc.constraint_name, tc.table_name, kcu.column_name,
