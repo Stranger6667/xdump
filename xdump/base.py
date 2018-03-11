@@ -131,9 +131,9 @@ class BaseBackend:
         else:
             return
         return '''
-            SELECT 
-                * 
-            FROM {foreign_table_name} 
+            SELECT
+                *
+            FROM {foreign_table_name}
             WHERE {foreign_column_name} IN (
                 SELECT {column_name} FROM {source}
             )'''.format(source=source, **foreign_key)
@@ -234,9 +234,9 @@ FROM
       ON tc.constraint_name = kcu.constraint_name
     JOIN information_schema.constraint_column_usage AS ccu
       ON ccu.constraint_name = tc.constraint_name
-WHERE 
-    constraint_type = 'FOREIGN KEY' AND 
-    tc.table_name != ccu.table_name AND 
-    tc.table_name = %(table_name)s AND 
-    NOT(ccu.table_name = ANY(%(full_tables)s));
+WHERE
+    constraint_type = 'FOREIGN KEY' AND
+    tc.table_name != ccu.table_name AND
+    tc.table_name = %(table_name)s AND
+    NOT(ccu.table_name = ANY(%(full_tables)s))
 '''
