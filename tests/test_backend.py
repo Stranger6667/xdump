@@ -118,57 +118,92 @@ def test_write_full_tables(backend, archive, db_helper):
     assert archive.namelist() == ['dump/data/groups.csv']
 
 
-@pytest.mark.usefixtures('schema', 'data')
 class TestAutoSelect:
 
-    def assert_employee(self, archive):
-        assert archive.read(
-            'dump/data/employees.csv'
-        ) == b'id,first_name,last_name,manager_id,group_id\n1,John,Doe,,1\n'
+    @pytest.fixture(autouse=True)
+    def setup(self, request, backend, archive_filename, db_helper, schema, data):
+        config = request.node.get_marker('dump')
+        backend.dump(archive_filename, *config.args)
+        self.archive = zipfile.ZipFile(archive_filename)
+        self.db_helper = db_helper
 
-    def assert_groups(self, archive):
-        assert archive.read('dump/data/groups.csv') == b'id,name\n1,Admin\n'
+    def assert_content(self, table, expected):
+        assert self.archive.read('dump/data/{}.csv'.format(table)) == expected
 
-    def test_related_table(self, backend, archive_filename):
-        backend.dump(archive_filename, [], {'employees': 'SELECT * FROM employees WHERE id = 1'})
-        archive = zipfile.ZipFile(archive_filename)
-        self.assert_employee(archive)
-        self.assert_groups(archive)
+    def assert_employee(self):
+        self.assert_content('employees', b'id,first_name,last_name,manager_id,group_id\n1,John,Doe,,1\n')
 
-    def test_full_tables_handling(self, backend, db_helper, archive_filename):
-        backend.dump(archive_filename, ['groups'], {'employees': 'SELECT * FROM employees WHERE id = 1'})
-        archive = zipfile.ZipFile(archive_filename)
-        self.assert_employee(archive)
-        db_helper.assert_groups(archive)
+    def assert_groups(self):
+        self.assert_content('groups', b'id,name\n1,Admin\n')
 
-    def test_long_relation(self, backend, archive_filename):
-        backend.dump(archive_filename, [], {'tickets': 'SELECT * FROM tickets WHERE id = 1'})
-        archive = zipfile.ZipFile(archive_filename)
-        assert archive.read('dump/data/tickets.csv') == b'id,author_id,subject,message\n1,1,Sub 1,Message 1\n'
-        self.assert_employee(archive)
-        self.assert_groups(archive)
+    def assert_all_groups(self):
+        self.db_helper.assert_groups(self.archive)
 
-    def test_related_to_full(self, backend, archive_filename, db_helper):
-        backend.dump(archive_filename, ['employees'], {})
-        archive = zipfile.ZipFile(archive_filename)
-        db_helper.assert_groups(archive)
+    @pytest.mark.dump([], {'employees': 'SELECT * FROM employees WHERE id = 1'})
+    def test_related_table(self):
+        """
+        Selects group related to the given employee.
+        """
+        self.assert_employee()
+        self.assert_groups()
 
-    def test_recursive_relation(self, backend, archive_filename):
-        backend.dump(archive_filename, [], {'employees': 'SELECT * FROM employees WHERE id = 2'})
-        archive = zipfile.ZipFile(archive_filename)
-        assert archive.read(
-            'dump/data/employees.csv'
-        ) == b'id,first_name,last_name,manager_id,group_id\n2,John,Black,1,1\n1,John,Doe,,1\n'
-        self.assert_groups(archive)
+    @pytest.mark.dump(['groups'], {'employees': 'SELECT * FROM employees WHERE id = 1'})
+    def test_full_tables_handling(self):
+        """
+        If all groups are dumped via ``full_tables``, then don't process them separately.
+        """
+        self.assert_employee()
+        self.assert_all_groups()
 
-    def test_long_recursive_relation(self, backend, archive_filename):
-        backend.dump(archive_filename, [], {'tickets': 'SELECT * FROM tickets WHERE id = 2'})
-        archive = zipfile.ZipFile(archive_filename)
-        assert archive.read('dump/data/tickets.csv') == b'id,author_id,subject,message\n2,2,Sub 2,Message 2\n'
-        assert archive.read(
-            'dump/data/employees.csv'
-        ) == b'id,first_name,last_name,manager_id,group_id\n2,John,Black,1,1\n1,John,Doe,,1\n'
-        self.assert_groups(archive)
-        self.assert_groups(archive)
+    @pytest.mark.dump([], {'tickets': 'SELECT * FROM tickets WHERE id = 1'})
+    def test_long_relation(self):
+        """
+        Objects, that are related to related objects should also be selected.
+        """
+        self.assert_content('tickets', b'id,author_id,subject,message\n1,1,Sub 1,Message 1\n')
+        self.assert_employee()
+        self.assert_groups()
+
+    @pytest.mark.dump(['employees'], {})
+    def test_related_to_full(self):
+        """
+        Selection of related objects should work for all tables in ``full_tables`` as well.
+        """
+        self.assert_all_groups()
+
+    @pytest.mark.dump([], {'employees': 'SELECT * FROM employees WHERE id = 2'})
+    def test_recursive_relation(self):
+        """
+        Self-referencing relations should also be handled.
+        """
+        self.assert_content(
+            'employees', b'id,first_name,last_name,manager_id,group_id\n2,John,Black,1,1\n1,John,Doe,,1\n'
+        )
+        self.assert_groups()
+
+    @pytest.mark.dump([], {'tickets': 'SELECT * FROM tickets WHERE id = 2'})
+    def test_long_recursive_relation(self):
+        """
+        If related objects have self-referencing relations, it should work as well.
+        """
+        self.assert_content('tickets', b'id,author_id,subject,message\n2,2,Sub 2,Message 2\n')
+        self.assert_content(
+            'employees', b'id,first_name,last_name,manager_id,group_id\n2,John,Black,1,1\n1,John,Doe,,1\n'
+        )
+        self.assert_groups()
+
+    @pytest.mark.dump(
+        [], {'tickets': 'SELECT * FROM tickets WHERE id = 1', 'employees': 'SELECT * FROM employees WHERE id = 2'}
+    )
+    def test_multiple_partials(self):
+        """
+        If different entries from ``partial_tables`` have references to the same relation, then output should contain
+        all data required for all mentioned entries without doubling.
+        """
+        self.assert_content('tickets', b'id,author_id,subject,message\n1,1,Sub 1,Message 1\n')
+        self.assert_content(
+            'employees', b'id,first_name,last_name,manager_id,group_id\n1,John,Doe,,1\n2,John,Black,1,1\n'
+        )
+        self.assert_groups()
 
     # TODO. Test multiple recursive relations
