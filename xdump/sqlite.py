@@ -39,6 +39,19 @@ class SQLiteBackend(BaseBackend):
         cursor = self.get_cursor()
         cursor.executescript(sql)
 
+    def get_foreign_keys(self, table, full_tables=(), recursive=False):
+        for foreign_key in self.run('PRAGMA foreign_key_list({})'.format(table)):
+            if foreign_key['table'] in full_tables:
+                continue
+            if foreign_key['table'] == table and not recursive:
+                continue
+            yield {
+                'foreign_table_name': foreign_key['table'],
+                'table_name': table,
+                'foreign_column_name': foreign_key['to'],
+                'column_name': foreign_key['from'],
+            }
+
     def dump(self, *args, **kwargs):
         cursor = self.get_cursor()
         cursor.execute('BEGIN IMMEDIATE')
