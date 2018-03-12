@@ -29,6 +29,13 @@ class XDumpCommand(BaseCommand):
             default=None,
         )
 
+    def handle(self, filename, **options):
+        backend = self.get_xdump_backend(options['alias'], options['backend'])
+        self._handle(filename, backend)
+
+    def _handle(self, filename, backend):
+        raise NotImplementedError
+
     def get_xdump_backend(self, alias='default', backend=None):
         configuration = self.get_database_configuration(alias)
         if backend is None:
