@@ -105,11 +105,16 @@ class BackendWrapper:
         self.assert_schema(schema)
 
     def assert_employees(self, archive):
-        assert archive.read('dump/data/employees.csv') == b'id,first_name,last_name,manager_id,group_id\n' \
-                                                          b'5,John,Snow,3,2\n' \
-                                                          b'4,John,Brown,3,2\n' \
-                                                          b'3,John,Smith,1,1\n' \
-                                                          b'1,John,Doe,,1\n'
+        # PG and SQLite produces results in a different order
+        rows = set(archive.read('dump/data/employees.csv').split(b'\n'))
+        rows.remove(b'')
+        assert rows == {
+            b'id,first_name,last_name,manager_id,referrer_id,group_id',
+            b'5,John,Snow,3,4,2',
+            b'4,John,Brown,3,,2',
+            b'3,John,Smith,1,,1',
+            b'1,John,Doe,,,1',
+        }
 
     def assert_groups(self, archive):
         assert archive.read('dump/data/groups.csv') == b'id,name\n1,Admin\n2,User\n'

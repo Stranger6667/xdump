@@ -128,13 +128,17 @@ class TestAutoSelect:
         self.db_helper = db_helper
 
     def assert_content(self, table, expected):
-        assert self.archive.read('dump/data/{}.csv'.format(table)) == expected
+        rows = set(self.archive.read('dump/data/{}.csv'.format(table)).split(b'\n'))
+        rows.remove(b'')
+        assert rows == expected
 
     def assert_employee(self):
-        self.assert_content('employees', b'id,first_name,last_name,manager_id,group_id\n1,John,Doe,,1\n')
+        self.assert_content(
+            'employees', {b'id,first_name,last_name,manager_id,referrer_id,group_id', b'1,John,Doe,,,1'}
+        )
 
     def assert_groups(self):
-        self.assert_content('groups', b'id,name\n1,Admin\n')
+        self.assert_content('groups', {b'id,name', b'1,Admin'})
 
     def assert_all_groups(self):
         self.db_helper.assert_groups(self.archive)
@@ -160,7 +164,7 @@ class TestAutoSelect:
         """
         Objects, that are related to related objects should also be selected.
         """
-        self.assert_content('tickets', b'id,author_id,subject,message\n1,1,Sub 1,Message 1\n')
+        self.assert_content('tickets', {b'id,author_id,subject,message', b'1,1,Sub 1,Message 1'})
         self.assert_employee()
         self.assert_groups()
 
@@ -177,7 +181,8 @@ class TestAutoSelect:
         Self-referencing relations should also be handled.
         """
         self.assert_content(
-            'employees', b'id,first_name,last_name,manager_id,group_id\n2,John,Black,1,1\n1,John,Doe,,1\n'
+            'employees',
+            {b'id,first_name,last_name,manager_id,referrer_id,group_id', b'2,John,Black,1,,1', b'1,John,Doe,,,1'}
         )
         self.assert_groups()
 
@@ -186,9 +191,10 @@ class TestAutoSelect:
         """
         If related objects have self-referencing relations, it should work as well.
         """
-        self.assert_content('tickets', b'id,author_id,subject,message\n2,2,Sub 2,Message 2\n')
+        self.assert_content('tickets', {b'id,author_id,subject,message', b'2,2,Sub 2,Message 2'})
         self.assert_content(
-            'employees', b'id,first_name,last_name,manager_id,group_id\n2,John,Black,1,1\n1,John,Doe,,1\n'
+            'employees',
+            {b'id,first_name,last_name,manager_id,referrer_id,group_id', b'2,John,Black,1,,1', b'1,John,Doe,,,1'}
         )
         self.assert_groups()
 
@@ -200,18 +206,23 @@ class TestAutoSelect:
         If different entries from ``partial_tables`` have references to the same relation, then output should contain
         all data required for all mentioned entries without doubling.
         """
-        self.assert_content('tickets', b'id,author_id,subject,message\n1,1,Sub 1,Message 1\n')
+        self.assert_content('tickets', {b'id,author_id,subject,message', b'1,1,Sub 1,Message 1'})
         self.assert_content(
-            'employees', b'id,first_name,last_name,manager_id,group_id\n1,John,Doe,,1\n2,John,Black,1,1\n'
+            'employees',
+            {b'id,first_name,last_name,manager_id,referrer_id,group_id', b'2,John,Black,1,,1', b'1,John,Doe,,,1'}
         )
         self.assert_groups()
 
     @pytest.mark.dump([], {'employees': 'SELECT * FROM employees WHERE id = 5'})
     def test_multiple_recursive_relations(self):
         self.assert_content(
-            'employees', b'id,first_name,last_name,manager_id,group_id\n'
-                         b'5,John,Snow,3,2\n'
-                         b'3,John,Smith,1,1\n'
-                         b'1,John,Doe,,1\n'
+            'employees',
+            {
+                b'id,first_name,last_name,manager_id,referrer_id,group_id',
+                b'5,John,Snow,3,4,2',
+                b'4,John,Brown,3,,2',
+                b'3,John,Smith,1,,1',
+                b'1,John,Doe,,,1',
+            }
         )
         self.assert_all_groups()

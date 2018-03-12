@@ -4,13 +4,13 @@ VALUES
   ('Admin'),
   ('User');
 INSERT INTO
-  employees (first_name, last_name, manager_id, group_id)
+  employees (first_name, last_name, manager_id, referrer_id, group_id)
 VALUES
-  ('John', 'Doe', NULL, 1),
-  ('John', 'Black', 1, 1),  -- Has no subordinates
-  ('John', 'Smith', 1, 1),
-  ('John', 'Brown', 3, 2),
-  ('John', 'Snow', 3, 2);
+  ('John', 'Doe', NULL, NULL, 1),
+  ('John', 'Black', 1, NULL, 1),  -- Has no subordinates
+  ('John', 'Smith', 1, NULL, 1),
+  ('John', 'Brown', 3, NULL, 2),
+  ('John', 'Snow', 3, 4, 2);
 INSERT INTO
   tickets (author_id, subject, message)
 VALUES
