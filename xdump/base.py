@@ -96,10 +96,10 @@ class BaseBackend:
             self.update_partial_tables(table, full_tables, partial_tables)
 
     def update_partial_tables(self, table, full_tables, partial_tables):
-        self.update_non_recursive_relations(full_tables, partial_tables, table)
-        self.update_recursive_relations(full_tables, partial_tables, table)
+        self.update_recursive_relations(table, full_tables, partial_tables)
+        self.update_non_recursive_relations(table, full_tables, partial_tables)
 
-    def update_recursive_relations(self, full_tables, partial_tables, table):
+    def update_recursive_relations(self, table, full_tables, partial_tables):
         for foreign_key in self.get_foreign_keys(table, full_tables, recursive=True):
             if table in partial_tables:
                 # TODO. The query will be overwritten if there are 2 or more recursive references
@@ -107,7 +107,7 @@ class BaseBackend:
                     source=partial_tables[table], target=table, **foreign_key
                 )
 
-    def update_non_recursive_relations(self, full_tables, partial_tables, table):
+    def update_non_recursive_relations(self, table, full_tables, partial_tables):
         for foreign_key in self.get_foreign_keys(table, full_tables):
             sql = self.get_related_data_sql(foreign_key, full_tables, partial_tables)
             if sql:

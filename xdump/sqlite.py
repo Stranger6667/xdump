@@ -50,6 +50,8 @@ class SQLiteBackend(BaseBackend):
                 continue
             if foreign_key['table'] == table and not recursive:
                 continue
+            if foreign_key['table'] != table and recursive:
+                continue
             yield {
                 'foreign_table_name': foreign_key['table'],
                 'table_name': table,

@@ -206,4 +206,12 @@ class TestAutoSelect:
         )
         self.assert_groups()
 
-    # TODO. Test multiple recursive relations
+    @pytest.mark.dump([], {'employees': 'SELECT * FROM employees WHERE id = 5'})
+    def test_multiple_recursive_relations(self):
+        self.assert_content(
+            'employees', b'id,first_name,last_name,manager_id,group_id\n'
+                         b'5,John,Snow,3,2\n'
+                         b'3,John,Smith,1,1\n'
+                         b'1,John,Doe,,1\n'
+        )
+        self.assert_all_groups()
