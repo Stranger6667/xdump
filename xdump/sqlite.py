@@ -1,6 +1,7 @@
 # coding: utf-8
 import sqlite3
 import subprocess
+import sys
 from csv import DictReader, DictWriter
 from io import StringIO
 from pathlib import Path
@@ -39,6 +40,10 @@ class SQLiteBackend(BaseBackend):
         cursor = self.get_cursor()
         cursor.executescript(sql)
 
+    def begin_immediate(self):
+        cursor = self.get_cursor()
+        cursor.execute('BEGIN IMMEDIATE')
+
     def get_foreign_keys(self, table, full_tables=(), recursive=False):
         for foreign_key in self.run('PRAGMA foreign_key_list({})'.format(table)):
             if foreign_key['table'] in full_tables:
@@ -51,10 +56,12 @@ class SQLiteBackend(BaseBackend):
                 'foreign_column_name': foreign_key['to'],
                 'column_name': foreign_key['from'],
             }
+        if sys.version_info[:2] < (3, 6):
+            # Before 3.6 sqlite3 used to implicitly commit an open transaction in this case.
+            self.begin_immediate()
 
     def dump(self, *args, **kwargs):
-        cursor = self.get_cursor()
-        cursor.execute('BEGIN IMMEDIATE')
+        self.begin_immediate()
         super().dump(*args, **kwargs)
 
     def dump_schema(self):
