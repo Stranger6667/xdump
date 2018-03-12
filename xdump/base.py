@@ -19,6 +19,8 @@ class BaseBackend:
     initial_setup_files = (schema_filename, )
     data_dir = 'dump/data/'
     tables_sql = None
+    non_recursive_relations_query = None
+    recursive_relations_query = None
 
     # Connection
 
@@ -94,6 +96,18 @@ class BaseBackend:
             self.update_partial_tables(table, full_tables, partial_tables)
 
     def update_partial_tables(self, table, full_tables, partial_tables):
+        self.update_non_recursive_relations(full_tables, partial_tables, table)
+        self.update_recursive_relations(full_tables, partial_tables, table)
+
+    def update_recursive_relations(self, full_tables, partial_tables, table):
+        for foreign_key in self.get_foreign_keys(table, full_tables, recursive=True):
+            if table in partial_tables:
+                # TODO. The query will be overwritten if there are 2 or more recursive references
+                partial_tables[table] = RECURSIVE_QUERY_TEMPLATE.format(
+                    source=partial_tables[table], target=table, **foreign_key
+                )
+
+    def update_non_recursive_relations(self, full_tables, partial_tables, table):
         for foreign_key in self.get_foreign_keys(table, full_tables):
             sql = self.get_related_data_sql(foreign_key, full_tables, partial_tables)
             if sql:
@@ -104,11 +118,6 @@ class BaseBackend:
                     partial_tables[foreign_table] = sql
                 # Now we select more than before for given table, so we have to do check related data for it.
                 self.update_partial_tables(foreign_table, full_tables, partial_tables)
-        for foreign_key in self.run(RECURSIVE_RELATIONS_QUERY, {'table_name': table, 'full_tables': list(full_tables)}):
-            if table in partial_tables:
-                # TODO. The query will be overwritten if there are 2 or more recursive references
-                query = RECURSIVE_QUERY_TEMPLATE.format(source=partial_tables[table], target=table, **foreign_key)
-                partial_tables[table] = query
 
     @property
     def tables(self):
@@ -118,11 +127,12 @@ class BaseBackend:
         for result in self.run(self.tables_sql):
             yield result['table_name']
 
-    def get_foreign_keys(self, table, full_tables=()):
+    def get_foreign_keys(self, table, full_tables=(), recursive=False):
         """
         Looks for foreign keys in the given table. Excluding ones, that will be dumped in ``full_tables``. TODO. Remove?
         """
-        return self.run(NON_RECURSIVE_RELATIONS_QUERY, {'table_name': table, 'full_tables': list(full_tables)})
+        query = self.recursive_relations_query if recursive else self.non_recursive_relations_query
+        return self.run(query, {'table_name': table, 'full_tables': list(full_tables)})
 
     def get_related_data_sql(self, foreign_key, full_tables, partial_tables):
         """
@@ -130,7 +140,7 @@ class BaseBackend:
         """
         table_name = foreign_key['table_name']
         if table_name in full_tables:
-            source = foreign_key["table_name"]
+            source = foreign_key['table_name']
         elif table_name in partial_tables:
             source = '({}) T'.format(partial_tables[table_name])
         else:
@@ -227,41 +237,6 @@ class BaseBackend:
         """
         raise NotImplementedError
 
-
-NON_RECURSIVE_RELATIONS_QUERY = '''
-SELECT
-    tc.constraint_name, tc.table_name, kcu.column_name,
-    ccu.table_name AS foreign_table_name,
-    ccu.column_name AS foreign_column_name
-FROM
-    information_schema.table_constraints AS tc
-    JOIN information_schema.key_column_usage AS kcu
-      ON tc.constraint_name = kcu.constraint_name
-    JOIN information_schema.constraint_column_usage AS ccu
-      ON ccu.constraint_name = tc.constraint_name
-WHERE
-    constraint_type = 'FOREIGN KEY' AND
-    tc.table_name != ccu.table_name AND
-    tc.table_name = %(table_name)s AND
-    NOT(ccu.table_name = ANY(%(full_tables)s))
-'''
-RECURSIVE_RELATIONS_QUERY = '''
-SELECT
-    tc.constraint_name, tc.table_name, kcu.column_name,
-    ccu.table_name AS foreign_table_name,
-    ccu.column_name AS foreign_column_name
-FROM
-    information_schema.table_constraints AS tc
-    JOIN information_schema.key_column_usage AS kcu
-      ON tc.constraint_name = kcu.constraint_name
-    JOIN information_schema.constraint_column_usage AS ccu
-      ON ccu.constraint_name = tc.constraint_name
-WHERE
-    constraint_type = 'FOREIGN KEY' AND
-    tc.table_name = ccu.table_name AND
-    tc.table_name = %(table_name)s AND
-    NOT(ccu.table_name = ANY(%(full_tables)s))
-'''
 
 RECURSIVE_QUERY_TEMPLATE = '''
 WITH RECURSIVE recursive_cte AS (
