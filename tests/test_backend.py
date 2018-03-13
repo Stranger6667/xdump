@@ -137,14 +137,12 @@ class TestAutoSelect:
         self.db_helper = db_helper
 
     def assert_content(self, table, expected):
-        rows = set(self.archive.read('dump/data/{}.csv'.format(table)).split(b'\n'))
-        rows.remove(b'')
-        assert rows == expected
+        self.db_helper.assert_content(self.archive, table, expected)
 
     def assert_employee(self):
         self.assert_content('employees', {EMPLOYEES_HEADER, DOE})
 
-    def assert_groups(self):
+    def assert_group(self):
         self.assert_content('groups', {b'id,name', b'1,Admin'})
 
     def assert_all_groups(self):
@@ -156,7 +154,7 @@ class TestAutoSelect:
         Selects group related to the given employee.
         """
         self.assert_employee()
-        self.assert_groups()
+        self.assert_group()
 
     @pytest.mark.dump([], {'employees': 'SELECT * FROM employees WHERE id = 1 LIMIT 1'})
     def test_complex_query(self):
@@ -164,7 +162,7 @@ class TestAutoSelect:
         Input query could contain LIMIT / OFFSET, etc.
         """
         self.assert_employee()
-        self.assert_groups()
+        self.assert_group()
 
     @pytest.mark.dump(['groups'], {'employees': 'SELECT * FROM employees WHERE id = 1'})
     def test_full_tables_handling(self):
@@ -181,7 +179,7 @@ class TestAutoSelect:
         """
         self.assert_content('tickets', {TICKETS_HEADER, b'1,1,Sub 1,Message 1'})
         self.assert_employee()
-        self.assert_groups()
+        self.assert_group()
 
     @pytest.mark.dump(['employees'], {})
     def test_related_to_full(self):
@@ -196,7 +194,7 @@ class TestAutoSelect:
         Self-referencing relations should also be handled.
         """
         self.assert_content('employees', {EMPLOYEES_HEADER, BLACK, DOE})
-        self.assert_groups()
+        self.assert_group()
 
     @pytest.mark.dump([], {'tickets': 'SELECT * FROM tickets WHERE id = 2'})
     def test_long_recursive_relation(self):
@@ -205,7 +203,7 @@ class TestAutoSelect:
         """
         self.assert_content('tickets', {TICKETS_HEADER, b'2,2,Sub 2,Message 2'})
         self.assert_content('employees', {EMPLOYEES_HEADER, BLACK, DOE})
-        self.assert_groups()
+        self.assert_group()
 
     @pytest.mark.dump(
         [], {'tickets': 'SELECT * FROM tickets WHERE id = 1', 'employees': 'SELECT * FROM employees WHERE id = 2'}
@@ -217,7 +215,7 @@ class TestAutoSelect:
         """
         self.assert_content('tickets', {TICKETS_HEADER, b'1,1,Sub 1,Message 1'})
         self.assert_content('employees', {EMPLOYEES_HEADER, BLACK, DOE})
-        self.assert_groups()
+        self.assert_group()
 
     @pytest.mark.dump(
         [], {'tickets': 'SELECT * FROM tickets WHERE id = 3', 'employees': 'SELECT * FROM employees WHERE id = 5'}

@@ -104,20 +104,26 @@ class BackendWrapper:
         schema = archive.read('dump/schema.sql')
         self.assert_schema(schema)
 
-    def assert_employees(self, archive):
-        # PG and SQLite produces results in a different order
-        rows = set(archive.read('dump/data/employees.csv').split(b'\n'))
+    def assert_content(self, archive, table, expected):
+        rows = set(archive.read('dump/data/{}.csv'.format(table)).split(b'\n'))
         rows.remove(b'')
-        assert rows == {
-            b'id,first_name,last_name,manager_id,referrer_id,group_id',
-            b'5,John,Snow,3,4,2',
-            b'4,John,Brown,3,,2',
-            b'3,John,Smith,1,,1',
-            b'1,John,Doe,,,1',
-        }
+        assert rows == expected
+
+    def assert_employees(self, archive):
+        self.assert_content(
+            archive,
+            'employees',
+            {
+                b'id,first_name,last_name,manager_id,referrer_id,group_id',
+                b'5,John,Snow,3,4,2',
+                b'4,John,Brown,3,,2',
+                b'3,John,Smith,1,,1',
+                b'1,John,Doe,,,1',
+            }
+        )
 
     def assert_groups(self, archive):
-        assert archive.read('dump/data/groups.csv') == b'id,name\n1,Admin\n2,User\n'
+        self.assert_content(archive, 'groups', {b'id,name', b'1,Admin', b'2,User'})
 
 
 class PostgreSQLWrapper(BackendWrapper):
