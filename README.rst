@@ -40,6 +40,14 @@ Making a dump (on production replica for example):
     >>> backend = PostgreSQLBackend(dbname='app_db', user='prod', password='pass', host='127.0.0.1', port='5432')
     >>> backend.dump('/path/to/dump.zip', full_tables=['groups'], partial_tables={'employees': EMPLOYEES_SQL})
 
+Load a dump on you local machine:
+
+.. code-block:: python
+
+    from xdump.postgresql import PostgreSQLBackend
+    >>> backend = PostgreSQLBackend(dbname='app_db', user='local', password='pass', host='127.0.0.1', port='5432')
+    >>> backend.load('/path/to/dump.zip')
+
 Automatic selection of related objects
 ++++++++++++++++++++++++++++++++++++++
 
@@ -48,14 +56,6 @@ both, recursive and non-recursive relations.
 For example, if the ``employees`` table has foreign keys ``group_id`` (to ``groups`` table) and ``manager_id``
 (to ``employees`` table) the resulting dump will have all objects related to selected employees
 (as well as for objects related to related objects, recursively).
-
-Load a dump on you local machine:
-
-.. code-block:: python
-
-    from xdump.postgresql import PostgreSQLBackend
-    >>> backend = PostgreSQLBackend(dbname='app_db', user='local', password='pass', host='127.0.0.1', port='5432')
-    >>> backend.load('/path/to/dump.zip')
 
 RDBMS support
 =============
