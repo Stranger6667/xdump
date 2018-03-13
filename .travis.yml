@@ -15,25 +15,25 @@ matrix:
     - python: 3.6
       env:
       - TOX_ENV=py36-sqlite
+      - SQLITE_BUILD=1
     - python: 3.5
       env:
       - TOX_ENV=py35-postgres
     - python: 3.5
       env:
       - TOX_ENV=py35-sqlite
+      - SQLITE_BUILD=1
     - python: 3.4
       env:
       - TOX_ENV=py34-postgres
     - python: 3.4
       env:
       - TOX_ENV=py34-sqlite
+      - SQLITE_BUILD=1
 script:
   - tox -e $TOX_ENV
 before_install:
-  - sudo add-apt-repository -y ppa:jonathonf/backports
-  - sudo apt-get update
-  - sudo apt-get install --only-upgrade sqlite3
-  - sudo sqlite3 -version
+  - if [ $SQLITE_BUILD = 1 ]; then sudo add-apt-repository -y ppa:jonathonf/backports && sudo apt-get update && apt-get install --only-upgrade sqlite3; fi
 install:
   - travis_retry pip install tox
 after_success:
