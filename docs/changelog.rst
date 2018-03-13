@@ -10,6 +10,7 @@ Added
 ~~~~~
 
 - Support for Python 3.4 & 3.5. `#7`_
+- Automatic selection of related objects.
 
 `0.2.0`_ - 2018-01-07
 ---------------------

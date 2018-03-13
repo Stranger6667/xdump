@@ -7,6 +7,7 @@ CREATE TABLE employees (
   first_name                TEXT                     NOT NULL,
   last_name                 TEXT                     NOT NULL,
   manager_id                INTEGER                  NULL REFERENCES employees (id),
+  referrer_id               INTEGER                  NULL REFERENCES employees (id),
   group_id                  INTEGER                  NULL REFERENCES groups (id)
 );
 CREATE TABLE tickets (
