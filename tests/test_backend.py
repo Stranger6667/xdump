@@ -151,6 +151,14 @@ class TestAutoSelect:
         self.assert_employee()
         self.assert_groups()
 
+    @pytest.mark.dump([], {'employees': 'SELECT * FROM employees WHERE id = 1 LIMIT 1'})
+    def test_complex_query(self):
+        """
+        Input query could contain LIMIT / OFFSET, etc.
+        """
+        self.assert_employee()
+        self.assert_groups()
+
     @pytest.mark.dump(['groups'], {'employees': 'SELECT * FROM employees WHERE id = 1'})
     def test_full_tables_handling(self):
         """

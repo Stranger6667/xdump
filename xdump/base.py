@@ -240,7 +240,7 @@ class BaseBackend:
 
 RECURSIVE_QUERY_TEMPLATE = '''
 WITH RECURSIVE recursive_cte AS (
-  {source}
+  SELECT * FROM ({source}) S
   UNION
   SELECT T.*
   FROM {table_name} T
