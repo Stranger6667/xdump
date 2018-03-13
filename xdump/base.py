@@ -102,7 +102,6 @@ class BaseBackend:
     def update_recursive_relations(self, table, full_tables, partial_tables):
         for foreign_key in self.get_foreign_keys(table, full_tables, recursive=True):
             if table in partial_tables:
-                # TODO. The query will be overwritten if there are 2 or more recursive references
                 partial_tables[table] = RECURSIVE_QUERY_TEMPLATE.format(
                     source=partial_tables[table], target=table, **foreign_key
                 )
@@ -129,7 +128,7 @@ class BaseBackend:
 
     def get_foreign_keys(self, table, full_tables=(), recursive=False):
         """
-        Looks for foreign keys in the given table. Excluding ones, that will be dumped in ``full_tables``. TODO. Remove?
+        Looks for foreign keys in the given table. Excluding ones, that will be dumped in ``full_tables``.
         """
         query = self.recursive_relations_query if recursive else self.non_recursive_relations_query
         return self.run(query, {'table_name': table, 'full_tables': list(full_tables)})

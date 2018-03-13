@@ -20,7 +20,6 @@ XDump
 XDump is an utility to make partial consistent dump and load it into the database.
 
 The idea is to provide an ability to specify what to include in the dump via SQL queries.
-Responsibility for dump integrity lays on the user in this case.
 
 Installation
 ============
@@ -36,26 +35,19 @@ Making a dump (on production replica for example):
 
 .. code-block:: python
 
-    >>> EMPLOYEES_SQL = '''
-    WITH RECURSIVE employees_cte AS (
-      SELECT *
-      FROM recent_employees
-      UNION
-      SELECT E.*
-      FROM employees E
-      INNER JOIN employees_cte ON (employees_cte.manager_id = E.id)
-    ), recent_employees AS (
-      SELECT *
-      FROM employees
-      ORDER BY id DESC
-      LIMIT 2
-    )
-    SELECT * FROM employees_cte
-    '''
+    >>> EMPLOYEES_SQL = 'SELECT * FROM employees ORDER BY id DESC LIMIT 2'
     >>> from xdump.postgresql import PostgreSQLBackend
     >>> backend = PostgreSQLBackend(dbname='app_db', user='prod', password='pass', host='127.0.0.1', port='5432')
     >>> backend.dump('/path/to/dump.zip', full_tables=['groups'], partial_tables={'employees': EMPLOYEES_SQL})
 
+Automatic selection of related objects
+++++++++++++++++++++++++++++++++++++++
+
+You don't have to specify all queries for related objects - XDump will load them for you automatically. It covers
+both, recursive and non-recursive relations.
+For example, if the ``employees`` table has foreign keys ``group_id`` (to ``groups`` table) and ``manager_id``
+(to ``employees`` table) the resulting dump will have all objects related to selected employees
+(as well as for objects related to related objects, recursively).
 
 Load a dump on you local machine:
 
