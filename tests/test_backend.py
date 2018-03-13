@@ -118,6 +118,15 @@ def test_write_full_tables(backend, archive, db_helper):
     assert archive.namelist() == ['dump/data/groups.csv']
 
 
+EMPLOYEES_HEADER = b'id,first_name,last_name,manager_id,referrer_id,group_id'
+TICKETS_HEADER = b'id,author_id,subject,message'
+DOE = b'1,John,Doe,,,1'
+BLACK = b'2,John,Black,1,,1'
+SMITH = b'3,John,Smith,1,,1'
+BROWN = b'4,John,Brown,3,,2'
+SNOW = b'5,John,Snow,3,4,2'
+
+
 class TestAutoSelect:
 
     @pytest.fixture(autouse=True)
@@ -133,9 +142,7 @@ class TestAutoSelect:
         assert rows == expected
 
     def assert_employee(self):
-        self.assert_content(
-            'employees', {b'id,first_name,last_name,manager_id,referrer_id,group_id', b'1,John,Doe,,,1'}
-        )
+        self.assert_content('employees', {EMPLOYEES_HEADER, DOE})
 
     def assert_groups(self):
         self.assert_content('groups', {b'id,name', b'1,Admin'})
@@ -172,7 +179,7 @@ class TestAutoSelect:
         """
         Objects, that are related to related objects should also be selected.
         """
-        self.assert_content('tickets', {b'id,author_id,subject,message', b'1,1,Sub 1,Message 1'})
+        self.assert_content('tickets', {TICKETS_HEADER, b'1,1,Sub 1,Message 1'})
         self.assert_employee()
         self.assert_groups()
 
@@ -188,10 +195,7 @@ class TestAutoSelect:
         """
         Self-referencing relations should also be handled.
         """
-        self.assert_content(
-            'employees',
-            {b'id,first_name,last_name,manager_id,referrer_id,group_id', b'2,John,Black,1,,1', b'1,John,Doe,,,1'}
-        )
+        self.assert_content('employees', {EMPLOYEES_HEADER, BLACK, DOE})
         self.assert_groups()
 
     @pytest.mark.dump([], {'tickets': 'SELECT * FROM tickets WHERE id = 2'})
@@ -199,11 +203,8 @@ class TestAutoSelect:
         """
         If related objects have self-referencing relations, it should work as well.
         """
-        self.assert_content('tickets', {b'id,author_id,subject,message', b'2,2,Sub 2,Message 2'})
-        self.assert_content(
-            'employees',
-            {b'id,first_name,last_name,manager_id,referrer_id,group_id', b'2,John,Black,1,,1', b'1,John,Doe,,,1'}
-        )
+        self.assert_content('tickets', {TICKETS_HEADER, b'2,2,Sub 2,Message 2'})
+        self.assert_content('employees', {EMPLOYEES_HEADER, BLACK, DOE})
         self.assert_groups()
 
     @pytest.mark.dump(
@@ -214,23 +215,19 @@ class TestAutoSelect:
         If different entries from ``partial_tables`` have references to the same relation, then output should contain
         all data required for all mentioned entries without doubling.
         """
-        self.assert_content('tickets', {b'id,author_id,subject,message', b'1,1,Sub 1,Message 1'})
-        self.assert_content(
-            'employees',
-            {b'id,first_name,last_name,manager_id,referrer_id,group_id', b'2,John,Black,1,,1', b'1,John,Doe,,,1'}
-        )
+        self.assert_content('tickets', {TICKETS_HEADER, b'1,1,Sub 1,Message 1'})
+        self.assert_content('employees', {EMPLOYEES_HEADER, BLACK, DOE})
         self.assert_groups()
+
+    @pytest.mark.dump(
+        [], {'tickets': 'SELECT * FROM tickets WHERE id = 3', 'employees': 'SELECT * FROM employees WHERE id = 5'}
+    )
+    def test_multiple_partials_with_intersections(self):
+        self.assert_content('tickets', {TICKETS_HEADER, b'3,2,Sub 3,Message 3'})
+        self.assert_content('employees', {EMPLOYEES_HEADER, SNOW, BROWN, SMITH, DOE, BLACK})
+        self.assert_all_groups()
 
     @pytest.mark.dump([], {'employees': 'SELECT * FROM employees WHERE id = 5'})
     def test_multiple_recursive_relations(self):
-        self.assert_content(
-            'employees',
-            {
-                b'id,first_name,last_name,manager_id,referrer_id,group_id',
-                b'5,John,Snow,3,4,2',
-                b'4,John,Brown,3,,2',
-                b'3,John,Smith,1,,1',
-                b'1,John,Doe,,,1',
-            }
-        )
+        self.assert_content('employees', {EMPLOYEES_HEADER, SNOW, BROWN, SMITH, DOE})
         self.assert_all_groups()
