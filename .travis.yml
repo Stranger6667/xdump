@@ -33,7 +33,7 @@ matrix:
 script:
   - tox -e $TOX_ENV
 before_install:
-  - if [ $SQLITE_BUILD = 1 ]; then sudo add-apt-repository -y ppa:jonathonf/backports && sudo apt-get update && apt-get install --only-upgrade sqlite3; fi
+  - if [ $SQLITE_BUILD = 1 ]; then sudo add-apt-repository -y ppa:jonathonf/backports && sudo apt-get update && sudo apt-get install --only-upgrade sqlite3; fi
 install:
   - travis_retry pip install tox
 after_success:
