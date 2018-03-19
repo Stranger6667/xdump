@@ -35,16 +35,19 @@ Making a dump (on production replica for example):
 
 .. code-block:: python
 
-    >>> EMPLOYEES_SQL = 'SELECT * FROM employees ORDER BY id DESC LIMIT 2'
     >>> from xdump.postgresql import PostgreSQLBackend
+    >>> 
     >>> backend = PostgreSQLBackend(dbname='app_db', user='prod', password='pass', host='127.0.0.1', port='5432')
-    >>> backend.dump('/path/to/dump.zip', full_tables=['groups'], partial_tables={'employees': EMPLOYEES_SQL})
+    >>> backend.dump(
+        '/path/to/dump.zip', 
+        full_tables=['groups'], 
+        partial_tables={'employees': 'SELECT * FROM employees ORDER BY id DESC LIMIT 2'}
+    )
 
 Load a dump on you local machine:
 
 .. code-block:: python
 
-    from xdump.postgresql import PostgreSQLBackend
     >>> backend = PostgreSQLBackend(dbname='app_db', user='local', password='pass', host='127.0.0.1', port='5432')
     >>> backend.load('/path/to/dump.zip')
 
