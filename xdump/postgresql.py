@@ -132,6 +132,17 @@ class PostgreSQLBackend(BaseBackend):
             self.copy_expert('COPY ({0}) TO STDOUT WITH CSV HEADER'.format(sql), output)
             return output.getvalue()
 
+    def get_search_path(self):
+        return self.run('show search_path;')[0]['search_path']
+
+    def restore_search_path(self, search_path):
+        self.run("SELECT pg_catalog.set_config('search_path', '{0}', false);".format(search_path))
+
+    def initial_setup(self, archive):
+        search_path = self.get_search_path()
+        super().initial_setup(archive)
+        self.restore_search_path(search_path)
+
     def recreate_database(self, owner=None):
         self.drop_connections(self.dbname)
         super().recreate_database(owner)

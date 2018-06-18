@@ -6,6 +6,11 @@ Changelog
 `Unreleased`_
 -------------
 
+Fixed
+~~~~~
+
+- Postgresql search path issue
+
 `0.3.0`_ - 2018-03-13
 ---------------------
 
