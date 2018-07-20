@@ -11,6 +11,14 @@ Added
 
 - Dump compression level customization. `#16`_
 
+`0.3.1`_ - 2018-06-19
+---------------------
+
+Fixed
+~~~~~
+
+- Postgresql search path issue
+
 `0.3.0`_ - 2018-03-13
 ---------------------
 
