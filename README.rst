@@ -55,6 +55,8 @@ Load a dump on you local machine:
 Dump is compressed by default. Compression level could be changed with passing ``compression`` argument to ``dump`` method.
 Valid options are ``zipfile.ZIP_STORED``, ``zipfile.ZIP_DEFLATED``, ``zipfile.ZIP_BZIP2`` and ``zipfile.ZIP_LZMA``.
 
+Verbosity of the output could be customized via `verbosity` (with values 0, 1 or 2) argument of a backend class.
+
 Automatic selection of related objects
 ++++++++++++++++++++++++++++++++++++++
 
