@@ -9,6 +9,23 @@ from .conftest import DATABASE, EMPLOYEES_SQL
 pytestmark = pytest.mark.usefixtures('schema')
 
 
+@pytest.mark.parametrize('query, params, expected', (
+    ('SELECT 1', None, ('Execute query: SELECT 1', 'Parameters: None')),
+    (
+        'SELECT 1 WHERE 1 = %(a)s',
+        {'a': 1},
+        ('Execute query: SELECT 1 WHERE 1 = %(a)s', "Parameters: {'a': 1}")
+    ),
+))
+def test_logging(backend, capsys, query, params, expected):
+    backend.verbosity = 2
+    backend.run(query, params)
+    out = capsys.readouterr()[0]
+    assert 'Execution time: ' in out
+    for entry in expected:
+        assert entry in out
+
+
 def test_dump_schema(backend, db_helper):
     """
     Schema should not include any COPY statements.

@@ -44,9 +44,13 @@ elif IS_SQLITE:
         pass
 
 
-def test_custom_backend_via_cli(archive_filename, db_helper):
-    call_command('xdump', archive_filename, backend=CustomBackend.__module__ + '.' + CustomBackend.__name__)
+def test_custom_backend_via_cli(archive_filename, db_helper, capsys):
+    call_command(
+        'xdump', archive_filename, backend=CustomBackend.__module__ + '.' + CustomBackend.__name__, verbosity=2
+    )
     db_helper.assert_dump(archive_filename)
+    out = capsys.readouterr()[0]
+    assert "Parameters: {'table_name': 'tickets', 'full_tables': ['groups']}" in out
 
 
 def test_custom_backend_via_config(settings, db_helper, archive_filename):

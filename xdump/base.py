@@ -2,9 +2,13 @@
 import zipfile
 from contextlib import contextmanager
 from functools import lru_cache
+from time import time
+
 from pathlib import Path
 
 import attr
+
+from .logging import get_logger
 
 
 @attr.s(cmp=False)
@@ -14,6 +18,7 @@ class BaseBackend:
     password = attr.ib()
     host = attr.ib()
     port = attr.ib(convert=str)
+    verbosity = attr.ib(convert=int, default=0)
     connections = {'default': {}}
     schema_filename = 'dump/schema.sql'
     initial_setup_files = (schema_filename, )
@@ -21,6 +26,12 @@ class BaseBackend:
     tables_sql = None
     non_recursive_relations_query = None
     recursive_relations_query = None
+
+    @property
+    def logger(self):
+        if not hasattr(self, '_logger'):
+            self._logger = get_logger('XDump', self.verbosity)
+        return self._logger
 
     # Connection
 
@@ -56,10 +67,15 @@ class BaseBackend:
         raise NotImplementedError
 
     def run(self, sql, params=None, using='default'):
+        self.logger.debug('Execute query: %s' % sql)
+        self.logger.debug('Parameters: %s' % params)
+        start = time()
         cursor = self.get_cursor(using)
         cursor.execute(sql, params)
         try:
-            return cursor.fetchall()
+            result = cursor.fetchall()
+            self.logger.debug('Execution time: %s' % (time() - start))
+            return result
         except Exception as exc:
             self.handle_run_exception(exc)
 
