@@ -32,6 +32,14 @@ class BaseBackend:
             self._logger = get_logger('XDump', self.verbosity)
         return self._logger
 
+    @contextmanager
+    def log_query(self, sql, params=None):
+        self.logger.debug('Execute query: %s' % sql)
+        self.logger.debug('Parameters: %s' % str(params))
+        start = time()
+        yield
+        self.logger.debug('Execution time: %s' % (time() - start))
+
     # Connection
 
     @lru_cache()
@@ -66,17 +74,13 @@ class BaseBackend:
         raise NotImplementedError
 
     def run(self, sql, params=None, using='default'):
-        self.logger.debug('Execute query: %s' % sql)
-        self.logger.debug('Parameters: %s' % str(params))
-        start = time()
-        cursor = self.get_cursor(using)
-        cursor.execute(sql, params)
-        try:
-            result = cursor.fetchall()
-            self.logger.debug('Execution time: %s' % (time() - start))
-            return result
-        except Exception as exc:
-            self.handle_run_exception(exc)
+        with self.log_query(sql, params):
+            cursor = self.get_cursor(using)
+            cursor.execute(sql, params)
+            try:
+                return cursor.fetchall()
+            except Exception as exc:
+                self.handle_run_exception(exc)
 
     def handle_run_exception(self, exc):
         raise NotImplementedError

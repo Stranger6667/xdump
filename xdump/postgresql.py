@@ -122,12 +122,9 @@ class PostgreSQLBackend(BaseBackend):
         file.writestr(self.sequences_filename, sequences)
 
     def copy_expert(self, sql, file, **kwargs):
-        self.logger.debug('Execute query: %s' % sql)
-        cursor = self.get_cursor()
-        start = time()
-        result = cursor.copy_expert(sql, file, **kwargs)
-        self.logger.debug('Execution time: %s' % (time() - start))
-        return result
+        with self.log_query(sql):
+            cursor = self.get_cursor()
+            return cursor.copy_expert(sql, file, **kwargs)
 
     def export_to_csv(self, sql):
         """

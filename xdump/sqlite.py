@@ -37,12 +37,10 @@ class SQLiteBackend(BaseBackend):
         return super().run(sql, params, using)
 
     def run_many(self, sql):
-        self.logger.debug('Execute query: %s' % sql)
-        sql = force_string(sql)
-        cursor = self.get_cursor()
-        start = time()
-        cursor.executescript(sql)
-        self.logger.debug('Execution time: %s' % (time() - start))
+        with self.log_query(sql):
+            sql = force_string(sql)
+            cursor = self.get_cursor()
+            cursor.executescript(sql)
 
     def begin_immediate(self):
         cursor = self.get_cursor()
@@ -76,11 +74,9 @@ class SQLiteBackend(BaseBackend):
     def export_to_csv(self, sql):
         with StringIO() as output:
             cursor = self.get_cursor()
-            self.logger.debug('Execute query: %s' % sql)
-            start = time()
-            cursor.execute(sql)
-            data = cursor.fetchall()
-            self.logger.debug('Execution time: %s' % (time() - start))
+            with self.log_query(sql):
+                cursor.execute(sql)
+                data = cursor.fetchall()
             writer = DictWriter(output, fieldnames=[column[0] for column in cursor.description], lineterminator='\n')
             writer.writeheader()
             writer.writerows(data)
