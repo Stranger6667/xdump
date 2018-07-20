@@ -2,9 +2,8 @@
 import zipfile
 from contextlib import contextmanager
 from functools import lru_cache
-from time import time
-
 from pathlib import Path
+from time import time
 
 import attr
 
@@ -68,7 +67,7 @@ class BaseBackend:
 
     def run(self, sql, params=None, using='default'):
         self.logger.debug('Execute query: %s' % sql)
-        self.logger.debug('Parameters: %s' % params)
+        self.logger.debug('Parameters: %s' % str(params))
         start = time()
         cursor = self.get_cursor(using)
         cursor.execute(sql, params)

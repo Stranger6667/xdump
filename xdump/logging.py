@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import logging
 import sys
 
+
 DEFAULT_LOGGING_LEVEL = logging.CRITICAL
 LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 

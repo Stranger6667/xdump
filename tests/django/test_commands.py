@@ -50,7 +50,7 @@ def test_custom_backend_via_cli(archive_filename, db_helper, capsys):
     )
     db_helper.assert_dump(archive_filename)
     out = capsys.readouterr()[0]
-    assert "Parameters: {'table_name': 'tickets', 'full_tables': ['groups']}" in out
+    assert "Parameters: " in out
 
 
 def test_custom_backend_via_config(settings, db_helper, archive_filename):
