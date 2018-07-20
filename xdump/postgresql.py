@@ -2,6 +2,7 @@
 import os
 import subprocess
 from io import BytesIO
+from time import time
 
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT, ISOLATION_LEVEL_REPEATABLE_READ
@@ -120,9 +121,13 @@ class PostgreSQLBackend(BaseBackend):
         sequences = self.dump_sequences()
         file.writestr(self.sequences_filename, sequences)
 
-    def copy_expert(self, *args, **kwargs):
+    def copy_expert(self, sql, file, **kwargs):
+        self.logger.debug('Execute query: %s' % sql)
         cursor = self.get_cursor()
-        return cursor.copy_expert(*args, **kwargs)
+        start = time()
+        result = cursor.copy_expert(sql, file, **kwargs)
+        self.logger.debug('Execution time: %s' % (time() - start))
+        return result
 
     def export_to_csv(self, sql):
         """
