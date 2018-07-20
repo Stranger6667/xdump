@@ -10,6 +10,7 @@ Added
 ~~~~~
 
 - Dump compression level customization. `#16`_
+- Logging support. `#15`_
 
 `0.3.1`_ - 2018-06-19
 ---------------------
@@ -57,12 +58,14 @@ Fixed
 
 - Initial release.
 
-.. _Unreleased: https://github.com/Stranger6667/xdump/compare/0.3.0...HEAD
+.. _Unreleased: https://github.com/Stranger6667/xdump/compare/0.3.1...HEAD
+.. _0.3.1: https://github.com/Stranger6667/xdump/compare/0.3.0...0.3.1
 .. _0.3.0: https://github.com/Stranger6667/xdump/compare/0.2.0...0.3.0
 .. _0.2.0: https://github.com/Stranger6667/xdump/compare/0.1.2...0.2.0
 .. _0.1.2: https://github.com/Stranger6667/xdump/compare/0.1.1...0.1.2
 .. _0.1.1: https://github.com/Stranger6667/xdump/compare/0.1.0...0.1.1
 
 .. _#16: https://github.com/Stranger6667/xdump/issues/16
+.. _#15: https://github.com/Stranger6667/xdump/issues/15
 .. _#8: https://github.com/Stranger6667/xdump/issues/8
 .. _#7: https://github.com/Stranger6667/xdump/issues/7

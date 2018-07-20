@@ -30,13 +30,13 @@ class XDumpCommand(BaseCommand):
         )
 
     def handle(self, filename, **options):
-        backend = self.get_xdump_backend(options['alias'], options['backend'])
+        backend = self.get_xdump_backend(options['alias'], options['backend'], options['verbosity'])
         self._handle(filename, backend)
 
     def _handle(self, filename, backend):
         raise NotImplementedError
 
-    def get_xdump_backend(self, alias='default', backend=None):
+    def get_xdump_backend(self, alias='default', backend=None, verbosity=0):
         configuration = self.get_database_configuration(alias)
         if backend is None:
             if 'BACKEND' in settings.XDUMP:
@@ -54,6 +54,7 @@ class XDumpCommand(BaseCommand):
             password=configuration.get('PASSWORD'),
             host=configuration.get('HOST'),
             port=configuration.get('PORT'),
+            verbosity=verbosity,
         )
 
     def get_database_configuration(self, alias):

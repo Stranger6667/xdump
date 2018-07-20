@@ -9,6 +9,33 @@ from .conftest import DATABASE, EMPLOYEES_SQL
 pytestmark = pytest.mark.usefixtures('schema')
 
 
+def test_logging(backend, capsys):
+    backend.verbosity = 2
+    backend.run('SELECT 1')
+    out = capsys.readouterr()[0]
+    assert 'Execute query: SELECT 1' in out
+    if DATABASE == 'postgres':
+        assert 'Parameters: None' in out
+    else:
+        assert 'Parameters: ()' in out
+    assert 'Execution time: ' in out
+
+
+def test_logging_parametrized(backend, capsys):
+    backend.verbosity = 2
+    if DATABASE == 'postgres':
+        query = 'SELECT 1 WHERE 1 = %(a)s'
+        params = {'a': 1}
+    else:
+        query = 'SELECT 1 WHERE 1 = ?'
+        params = (1, )
+    backend.run(query, params)
+    out = capsys.readouterr()[0]
+    assert 'Execute query: %s' % query in out
+    assert 'Parameters: %s' % str(params) in out
+    assert 'Execution time: ' in out
+
+
 def test_dump_schema(backend, db_helper):
     """
     Schema should not include any COPY statements.
