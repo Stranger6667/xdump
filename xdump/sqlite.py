@@ -5,7 +5,6 @@ import sys
 from csv import DictReader, DictWriter
 from io import StringIO
 from pathlib import Path
-from time import time
 
 from .base import BaseBackend
 

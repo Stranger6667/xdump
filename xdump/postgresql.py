@@ -2,7 +2,6 @@
 import os
 import subprocess
 from io import BytesIO
-from time import time
 
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT, ISOLATION_LEVEL_REPEATABLE_READ
