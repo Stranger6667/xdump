@@ -77,12 +77,12 @@ class BaseBackend:
 
     # Dumping the data
 
-    def dump(self, filename, full_tables=(), partial_tables=None):
+    def dump(self, filename, full_tables=(), partial_tables=None, compression=zipfile.ZIP_DEFLATED):
         """
         Creates a dump, which could be used to restore the database.
         """
         partial_tables = partial_tables or {}
-        with zipfile.ZipFile(filename, 'w', zipfile.ZIP_DEFLATED) as file:
+        with zipfile.ZipFile(filename, 'w', compression) as file:
             self.write_initial_setup(file)
             self.add_related_data(full_tables, partial_tables)
             self.write_full_tables(file, full_tables)

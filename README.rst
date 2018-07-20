@@ -51,6 +51,10 @@ Load a dump on you local machine:
     >>> backend = PostgreSQLBackend(dbname='app_db', user='local', password='pass', host='127.0.0.1', port='5432')
     >>> backend.load('/path/to/dump.zip')
 
+
+Dump is compressed by default. Compression level could be changed with passing ``compression`` argument to ``dump`` method.
+Valid options are ``zipfile.ZIP_STORED``, ``zipfile.ZIP_DEFLATED``, ``zipfile.ZIP_BZIP2`` and ``zipfile.ZIP_LZMA``.
+
 Automatic selection of related objects
 ++++++++++++++++++++++++++++++++++++++
 
