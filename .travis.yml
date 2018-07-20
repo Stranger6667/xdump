@@ -9,6 +9,13 @@ matrix:
     - python: 3.6
       env:
       - TOX_ENV=lint
+    - python: 3.7
+      env:
+      - TOX_ENV=py37-postgres
+    - python: 3.7
+      env:
+      - TOX_ENV=py37-sqlite
+      - SQLITE_BUILD=1
     - python: 3.6
       env:
       - TOX_ENV=py36-postgres
