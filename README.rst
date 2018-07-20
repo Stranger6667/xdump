@@ -143,4 +143,4 @@ And usage is:
 Python support
 ==============
 
-XDump supports Python 3.4, 3.5 & 3.6.
+XDump supports Python 3.4 - 3.7.
