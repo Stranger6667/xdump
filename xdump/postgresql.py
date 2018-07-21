@@ -12,16 +12,134 @@ from .utils import make_options
 
 
 SEQUENCES_SQL = "SELECT relname FROM pg_class WHERE relkind = 'S'"
+# The query below doesn't use `information_schema.table_constraints` and ``, but instead uses its modified versions
+# to mitigate permissions insufficiency on that views (they filter data by permissions of the current user)
 BASE_RELATIONS_QUERY = '''
 SELECT
+    DISTINCT
     tc.constraint_name, tc.table_name, kcu.column_name,
     ccu.table_name AS foreign_table_name,
     ccu.column_name AS foreign_column_name
 FROM
-    information_schema.table_constraints AS tc
+    (
+    SELECT current_database()::information_schema.sql_identifier AS constraint_catalog,
+    nc.nspname::information_schema.sql_identifier AS constraint_schema,
+    c.conname::information_schema.sql_identifier AS constraint_name,
+    current_database()::information_schema.sql_identifier AS table_catalog,
+    nr.nspname::information_schema.sql_identifier AS table_schema,
+    r.relname::information_schema.sql_identifier AS table_name,
+        CASE c.contype
+            WHEN 'c'::"char" THEN 'CHECK'::text
+            WHEN 'f'::"char" THEN 'FOREIGN KEY'::text
+            WHEN 'p'::"char" THEN 'PRIMARY KEY'::text
+            WHEN 'u'::"char" THEN 'UNIQUE'::text
+            ELSE NULL::text
+        END::information_schema.character_data AS constraint_type,
+        CASE
+            WHEN c.condeferrable THEN 'YES'::text
+            ELSE 'NO'::text
+        END::information_schema.yes_or_no AS is_deferrable,
+        CASE
+            WHEN c.condeferred THEN 'YES'::text
+            ELSE 'NO'::text
+        END::information_schema.yes_or_no AS initially_deferred
+   FROM pg_namespace nc,
+    pg_namespace nr,
+    pg_constraint c,
+    pg_class r
+  WHERE
+    nc.oid = c.connamespace AND
+    nr.oid = r.relnamespace AND
+    c.conrelid = r.oid AND
+    (c.contype <> ALL (ARRAY['t'::"char", 'x'::"char"])) AND
+    r.relkind = 'r'::"char" AND NOT pg_is_other_temp_schema(nr.oid)
+UNION ALL
+ SELECT current_database()::information_schema.sql_identifier AS constraint_catalog,
+    nr.nspname::information_schema.sql_identifier AS constraint_schema,
+    (
+      ((((nr.oid::text || '_'::text) || r.oid::text) || '_'::text) || a.attnum::text) || '_not_null'::text
+    )::information_schema.sql_identifier AS constraint_name,
+    current_database()::information_schema.sql_identifier AS table_catalog,
+    nr.nspname::information_schema.sql_identifier AS table_schema,
+    r.relname::information_schema.sql_identifier AS table_name,
+    'CHECK'::character varying::information_schema.character_data AS constraint_type,
+    'NO'::character varying::information_schema.yes_or_no AS is_deferrable,
+    'NO'::character varying::information_schema.yes_or_no AS initially_deferred
+   FROM pg_namespace nr,
+    pg_class r,
+    pg_attribute a
+  WHERE
+    nr.oid = r.relnamespace AND
+    r.oid = a.attrelid AND
+    a.attnotnull AND
+    a.attnum > 0 AND
+    NOT a.attisdropped AND
+    r.relkind = 'r'::"char" AND
+    NOT pg_is_other_temp_schema(nr.oid)
+    ) AS tc
     JOIN information_schema.key_column_usage AS kcu
-      ON tc.constraint_name = kcu.constraint_name
-    JOIN information_schema.constraint_column_usage AS ccu
+      ON tc.constraint_name = kcu.constraint_name AND kcu.table_name = tc.table_name
+    JOIN (
+    SELECT current_database()::information_schema.sql_identifier AS table_catalog,
+    x.tblschema::information_schema.sql_identifier AS table_schema,
+    x.tblname::information_schema.sql_identifier AS table_name,
+    x.colname::information_schema.sql_identifier AS column_name,
+    current_database()::information_schema.sql_identifier AS constraint_catalog,
+    x.cstrschema::information_schema.sql_identifier AS constraint_schema,
+    x.cstrname::information_schema.sql_identifier AS constraint_name
+   FROM ( SELECT DISTINCT nr.nspname,
+            r.relname,
+            r.relowner,
+            a.attname,
+            nc.nspname,
+            c.conname
+           FROM pg_namespace nr,
+            pg_class r,
+            pg_attribute a,
+            pg_depend d,
+            pg_namespace nc,
+            pg_constraint c
+          WHERE
+            nr.oid = r.relnamespace AND
+            r.oid = a.attrelid AND
+            d.refclassid = 'pg_class'::regclass::oid AND
+            d.refobjid = r.oid AND
+            d.refobjsubid = a.attnum AND
+            d.classid = 'pg_constraint'::regclass::oid AND
+            d.objid = c.oid AND
+            c.connamespace = nc.oid AND
+            c.contype = 'c'::"char" AND
+            r.relkind = 'r'::"char" AND
+            NOT a.attisdropped
+        UNION ALL
+         SELECT nr.nspname,
+            r.relname,
+            r.relowner,
+            a.attname,
+            nc.nspname,
+            c.conname
+           FROM pg_namespace nr,
+            pg_class r,
+            pg_attribute a,
+            pg_namespace nc,
+            pg_constraint c
+          WHERE
+            nr.oid = r.relnamespace AND
+            r.oid = a.attrelid AND
+            nc.oid = c.connamespace AND
+            CASE
+              WHEN c.contype = 'f'::"char"
+                THEN
+                  r.oid = c.confrelid AND (a.attnum = ANY (c.confkey))
+                ELSE
+                  r.oid = c.conrelid AND (a.attnum = ANY (c.conkey))
+            END AND
+            NOT a.attisdropped AND
+            (
+              c.contype = ANY (ARRAY['p'::"char", 'u'::"char", 'f'::"char"])) AND
+              r.relkind = 'r'::"char"
+            ) x(tblschema, tblname, tblowner, colname, cstrschema, cstrname)
+    ) AS ccu
       ON ccu.constraint_name = tc.constraint_name
 WHERE
     constraint_type = 'FOREIGN KEY' AND
