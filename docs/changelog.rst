@@ -12,6 +12,12 @@ Added
 - Dump compression level customization. `#16`_
 - Logging support. `#15`_
 
+Fixed
+~~~~~
+
+- Querying for relations by read-only user in Postgres. `#21`_
+- Constraint names clashing on different tables. `#22`_
+
 `0.3.1`_ - 2018-06-19
 ---------------------
 
@@ -65,6 +71,8 @@ Fixed
 .. _0.1.2: https://github.com/Stranger6667/xdump/compare/0.1.1...0.1.2
 .. _0.1.1: https://github.com/Stranger6667/xdump/compare/0.1.0...0.1.1
 
+.. _#22: https://github.com/Stranger6667/xdump/issues/22
+.. _#21: https://github.com/Stranger6667/xdump/issues/21
 .. _#16: https://github.com/Stranger6667/xdump/issues/16
 .. _#15: https://github.com/Stranger6667/xdump/issues/15
 .. _#8: https://github.com/Stranger6667/xdump/issues/8
