@@ -22,7 +22,6 @@ class BaseBackend:
     schema_filename = 'dump/schema.sql'
     initial_setup_files = (schema_filename, )
     data_dir = 'dump/data/'
-    tables_sql = None
     non_recursive_relations_query = None
     recursive_relations_query = None
 
@@ -117,8 +116,12 @@ class BaseBackend:
         """
         Updates selects for partial tables to grab all objects, that are referenced by full / partial tables.
         """
-        for table in self.tables:
+        tables = self.get_tables_for_related_data(full_tables, partial_tables)
+        for table in tables:
             self.update_partial_tables(table, full_tables, partial_tables)
+
+    def get_tables_for_related_data(self, full_tables, partial_tables):
+        return tuple(full_tables) + tuple(partial_tables.keys())
 
     def update_partial_tables(self, table, full_tables, partial_tables):
         self.update_recursive_relations(table, full_tables, partial_tables)
@@ -137,19 +140,11 @@ class BaseBackend:
             if sql:
                 foreign_table = foreign_key['foreign_table_name']
                 if foreign_table in partial_tables:
-                    partial_tables[foreign_table] += 'UNION ' + sql
+                    partial_tables[foreign_table] += ' UNION ' + sql
                 else:
                     partial_tables[foreign_table] = sql
                 # Now we select more than before for given table, so we have to do check related data for it.
                 self.update_partial_tables(foreign_table, full_tables, partial_tables)
-
-    @property
-    def tables(self):
-        """
-        All non-system tables.
-        """
-        for result in self.run(self.tables_sql):
-            yield result['table_name']
 
     def get_foreign_keys(self, table, full_tables=(), recursive=False):
         """

@@ -20,7 +20,6 @@ def force_string(value):
 
 
 class SQLiteBackend(BaseBackend):
-    tables_sql = "SELECT name AS table_name FROM sqlite_master WHERE type='table'"
 
     def connect(self, *args, **kwargs):
         connection = sqlite3.connect(self.dbname)
@@ -30,6 +29,10 @@ class SQLiteBackend(BaseBackend):
     def run_dump(self, *args, **kwargs):
         process = subprocess.Popen(('sqlite3', ) + args, stdout=subprocess.PIPE)
         return process.communicate()[0]
+
+    def get_tables_for_related_data(self, full_tables, partial_tables):
+        for result in self.run("SELECT name AS table_name FROM sqlite_master WHERE type='table'"):
+            yield result['table_name']
 
     def run(self, sql, params=(), using='default'):
         sql = force_string(sql)
