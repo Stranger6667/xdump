@@ -47,11 +47,11 @@ FROM
     pg_namespace nr,
     pg_constraint c,
     pg_class r
-  WHERE 
-    nc.oid = c.connamespace AND 
-    nr.oid = r.relnamespace AND 
-    c.conrelid = r.oid AND 
-    (c.contype <> ALL (ARRAY['t'::"char", 'x'::"char"])) AND 
+  WHERE
+    nc.oid = c.connamespace AND
+    nr.oid = r.relnamespace AND
+    c.conrelid = r.oid AND
+    (c.contype <> ALL (ARRAY['t'::"char", 'x'::"char"])) AND
     r.relkind = 'r'::"char" AND NOT pg_is_other_temp_schema(nr.oid)
 UNION ALL
  SELECT current_database()::information_schema.sql_identifier AS constraint_catalog,
@@ -68,13 +68,13 @@ UNION ALL
    FROM pg_namespace nr,
     pg_class r,
     pg_attribute a
-  WHERE 
-    nr.oid = r.relnamespace AND 
-    r.oid = a.attrelid AND 
-    a.attnotnull AND 
-    a.attnum > 0 AND 
-    NOT a.attisdropped AND 
-    r.relkind = 'r'::"char" AND 
+  WHERE
+    nr.oid = r.relnamespace AND
+    r.oid = a.attrelid AND
+    a.attnotnull AND
+    a.attnum > 0 AND
+    NOT a.attisdropped AND
+    r.relkind = 'r'::"char" AND
     NOT pg_is_other_temp_schema(nr.oid)
     ) AS tc
     JOIN information_schema.key_column_usage AS kcu
@@ -99,17 +99,17 @@ UNION ALL
             pg_depend d,
             pg_namespace nc,
             pg_constraint c
-          WHERE 
-            nr.oid = r.relnamespace AND 
-            r.oid = a.attrelid AND 
+          WHERE
+            nr.oid = r.relnamespace AND
+            r.oid = a.attrelid AND
             d.refclassid = 'pg_class'::regclass::oid AND
-            d.refobjid = r.oid AND 
-            d.refobjsubid = a.attnum AND 
-            d.classid = 'pg_constraint'::regclass::oid AND 
-            d.objid = c.oid AND 
-            c.connamespace = nc.oid AND 
-            c.contype = 'c'::"char" AND 
-            r.relkind = 'r'::"char" AND 
+            d.refobjid = r.oid AND
+            d.refobjsubid = a.attnum AND
+            d.classid = 'pg_constraint'::regclass::oid AND
+            d.objid = c.oid AND
+            c.connamespace = nc.oid AND
+            c.contype = 'c'::"char" AND
+            r.relkind = 'r'::"char" AND
             NOT a.attisdropped
         UNION ALL
          SELECT nr.nspname,
@@ -123,20 +123,20 @@ UNION ALL
             pg_attribute a,
             pg_namespace nc,
             pg_constraint c
-          WHERE 
-            nr.oid = r.relnamespace AND 
-            r.oid = a.attrelid AND 
+          WHERE
+            nr.oid = r.relnamespace AND
+            r.oid = a.attrelid AND
             nc.oid = c.connamespace AND
             CASE
-              WHEN c.contype = 'f'::"char" 
-                THEN 
+              WHEN c.contype = 'f'::"char"
+                THEN
                   r.oid = c.confrelid AND (a.attnum = ANY (c.confkey))
-                ELSE 
+                ELSE
                   r.oid = c.conrelid AND (a.attnum = ANY (c.conkey))
-            END AND 
-            NOT a.attisdropped AND 
+            END AND
+            NOT a.attisdropped AND
             (
-              c.contype = ANY (ARRAY['p'::"char", 'u'::"char", 'f'::"char"])) AND 
+              c.contype = ANY (ARRAY['p'::"char", 'u'::"char", 'f'::"char"])) AND
               r.relkind = 'r'::"char"
             ) x(tblschema, tblname, tblowner, colname, cstrschema, cstrname)
     ) AS ccu
