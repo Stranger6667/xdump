@@ -36,9 +36,14 @@ class BaseBackend:
     def log_query(self, sql, params=None):
         self.logger.debug('Execute query: %s' % sql)
         self.logger.debug('Parameters: %s' % str(params))
+        with self.log_time():
+            yield
+
+    @contextmanager
+    def log_time(self, message='Execution time: %s'):
         start = time()
         yield
-        self.logger.debug('Execution time: %s' % (time() - start))
+        self.logger.debug(message % (time() - start))
 
     # Connection
 
@@ -100,12 +105,13 @@ class BaseBackend:
         """
         Creates a dump, which could be used to restore the database.
         """
-        partial_tables = partial_tables or {}
-        with zipfile.ZipFile(filename, 'w', compression) as file:
-            self.write_initial_setup(file)
-            self.add_related_data(full_tables, partial_tables)
-            self.write_full_tables(file, full_tables)
-            self.write_partial_tables(file, partial_tables)
+        with self.log_time('Total execution time: %s'):
+            partial_tables = partial_tables or {}
+            with zipfile.ZipFile(filename, 'w', compression) as file:
+                self.write_initial_setup(file)
+                self.add_related_data(full_tables, partial_tables)
+                self.write_full_tables(file, full_tables)
+                self.write_partial_tables(file, partial_tables)
 
     def add_related_data(self, full_tables, partial_tables):
         """
@@ -223,9 +229,10 @@ class BaseBackend:
         """
         Loads schema, sequences and data into the database.
         """
-        archive = zipfile.ZipFile(filename)
-        self.initial_setup(archive)
-        self.load_data(archive)
+        with self.log_time('Total execution time: %s'):
+            archive = zipfile.ZipFile(filename)
+            self.initial_setup(archive)
+            self.load_data(archive)
 
     def initial_setup(self, archive):
         """
