@@ -20,7 +20,6 @@ def force_string(value):
 
 
 class SQLiteBackend(BaseBackend):
-    tables_sql = "SELECT name AS table_name FROM sqlite_master WHERE type='table'"
 
     def connect(self, *args, **kwargs):
         connection = sqlite3.connect(self.dbname)

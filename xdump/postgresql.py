@@ -138,13 +138,6 @@ class PostgreSQLBackend(BaseBackend):
             'isolation_level': ISOLATION_LEVEL_AUTOCOMMIT,
         }
     }
-    tables_sql = '''
-    SELECT table_name
-    FROM information_schema.tables
-    WHERE
-        table_schema NOT IN ('pg_catalog', 'information_schema') AND
-        table_schema NOT LIKE 'pg_toast%'
-    '''
     non_recursive_relations_query = BASE_RELATIONS_QUERY.format(operator='!=')
     recursive_relations_query = BASE_RELATIONS_QUERY.format(operator='=')
 
