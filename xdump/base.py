@@ -116,8 +116,12 @@ class BaseBackend:
         """
         Updates selects for partial tables to grab all objects, that are referenced by full / partial tables.
         """
-        for table in tuple(full_tables) + tuple(partial_tables.keys()):
+        tables = self.get_tables_for_related_data(full_tables, partial_tables)
+        for table in tables:
             self.update_partial_tables(table, full_tables, partial_tables)
+
+    def get_tables_for_related_data(self, full_tables, partial_tables):
+        return tuple(full_tables) + tuple(partial_tables.keys())
 
     def update_partial_tables(self, table, full_tables, partial_tables):
         self.update_recursive_relations(table, full_tables, partial_tables)
