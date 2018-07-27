@@ -1,9 +1,7 @@
 import pytest
 
-from tests.conftest import EMPLOYEES_SQL
-
 import yaml
-
+from tests.conftest import EMPLOYEES_SQL
 from xdump.cli import xdump
 
 
