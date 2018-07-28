@@ -41,6 +41,18 @@ if IS_POSTGRES and 'TRAVIS' in os.environ:
     postgresql = factories.postgresql('postgresql_proc')
 
 
+def is_search_path_fixed(connection):
+    """
+    Check if a security issue with `search_path` is fixed in the current PG version. CVE-2018-1058
+    """
+    version = connection.server_version
+    return version >= 100003 or \
+        90608 <= version < 100000 or \
+        90512 <= version < 90600 or \
+        90417 <= version < 90500 or \
+        90322 <= version < 90400
+
+
 @pytest.fixture
 def dbname(tmpdir):
     return str(tmpdir.join('test.db'))
@@ -128,6 +140,21 @@ class BackendWrapper:
 
 class PostgreSQLWrapper(BackendWrapper):
 
+    @property
+    def is_search_path_fixed(self):
+        if not hasattr(self, '_is_search_path_fixed'):
+            connection = self.backend.get_connection()
+            self._is_search_path_fixed = is_search_path_fixed(connection)
+        return self._is_search_path_fixed
+
+    def assert_schema(self, schema):
+        if self.is_search_path_fixed:
+            template = 'CREATE TABLE public.{0}'
+        else:
+            template = 'CREATE TABLE {0}'
+        for table in ('groups', 'employees', 'tickets'):
+            assert template.format(table).encode() in schema
+
     def is_database_exists(self, dbname):
         return self.backend.run(
             'SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = %s)', [dbname]
@@ -139,7 +166,11 @@ class PostgreSQLWrapper(BackendWrapper):
         ]
 
     def assert_unused_sequences(self, archive):
-        assert "SELECT pg_catalog.setval('groups_id_seq', 1, false);".encode() in archive.read('dump/sequences.sql')
+        if self.is_search_path_fixed:
+            string = "SELECT pg_catalog.setval('public.groups_id_seq', 1, false);"
+        else:
+            string = "SELECT pg_catalog.setval('groups_id_seq', 1, false);"
+        assert string.encode() in archive.read('dump/sequences.sql')
 
     def get_tables_count(self):
         return self.backend.run(
