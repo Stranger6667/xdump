@@ -11,6 +11,11 @@ Added
 
 - Options to exclude schema or data from the dump. `#29`_
 
+Changed
+~~~~~~~
+
+- SQLite < 3.8.3 is unsupported explicitly. ``RuntimeError`` is raised with that SQLite version. `#13`_
+
 `0.4.0`_ - 2018-07-23
 ---------------------
 
@@ -85,5 +90,6 @@ Fixed
 .. _#21: https://github.com/Stranger6667/xdump/issues/21
 .. _#16: https://github.com/Stranger6667/xdump/issues/16
 .. _#15: https://github.com/Stranger6667/xdump/issues/15
+.. _#13: https://github.com/Stranger6667/xdump/issues/13
 .. _#8: https://github.com/Stranger6667/xdump/issues/8
 .. _#7: https://github.com/Stranger6667/xdump/issues/7
