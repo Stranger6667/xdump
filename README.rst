@@ -72,7 +72,7 @@ RDBMS support
 At the moment only the following are supported:
 
 - PostgreSQL
-- SQLite
+- SQLite >= 3.8.3
 
 Django support
 ==============
