@@ -6,9 +6,6 @@ import pytest
 from .conftest import DATABASE, EMPLOYEES_SQL
 
 
-pytestmark = pytest.mark.usefixtures('schema')
-
-
 def test_logging(backend, capsys):
     backend.verbosity = 2
     backend.run('SELECT 1')
@@ -36,6 +33,7 @@ def test_logging_parametrized(backend, capsys):
     assert 'Execution time: ' in out
 
 
+@pytest.mark.usefixtures('schema')
 def test_dump_schema(backend, db_helper):
     """
     Schema should not include any COPY statements.
@@ -122,6 +120,7 @@ class TestHighLevelInterface:
             assert result[0]['currval'] == 2
 
 
+@pytest.mark.usefixtures('schema')
 def test_write_schema(backend, db_helper, archive):
     backend.write_schema(archive)
     schema = archive.read('dump/schema.sql')

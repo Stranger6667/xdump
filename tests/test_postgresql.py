@@ -7,9 +7,10 @@ import pytest
 from .conftest import is_search_path_fixed
 
 
-pytestmark = [pytest.mark.postgres, pytest.mark.usefixtures('schema')]
+pytestmark = [pytest.mark.postgres]
 
 
+@pytest.mark.usefixtures('schema')
 def test_write_sequences(backend, archive, db_helper):
     backend.write_sequences(archive)
     db_helper.assert_unused_sequences(archive)
@@ -25,6 +26,7 @@ def test_handling_error(backend):
     ('INSERT INTO groups (name) VALUES (\'test\')', 1),
     ('INSERT INTO groups (name) VALUES (\'test\'), (\'test2\')', 2),
 ))
+@pytest.mark.usefixtures('schema')
 def test_dump_sequences(backend, db_helper, cursor, sql, expected):
     cursor.execute(sql)
     if db_helper.is_search_path_fixed:
@@ -34,10 +36,12 @@ def test_dump_sequences(backend, db_helper, cursor, sql, expected):
     assert template.format(expected).encode() in backend.dump_sequences()
 
 
+@pytest.mark.usefixtures('schema')
 def test_get_sequences(backend):
     assert backend.get_sequences() == ['groups_id_seq', 'employees_id_seq', 'tickets_id_seq']
 
 
+@pytest.mark.usefixtures('schema')
 def test_run_dump(backend, db_helper):
     schema = backend.run_dump()
     db_helper.assert_schema(schema)
@@ -66,7 +70,6 @@ def test_run_dump_environment_empty_password(backend):
     (90608, True),
     (90607, False),
 ))
-@pytest.mark.usefixtures()
 def test_postgres_version(version, is_fixed):
     mocked_connection = Mock(server_version=version)
     assert is_search_path_fixed(mocked_connection) == is_fixed
