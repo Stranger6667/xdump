@@ -23,8 +23,8 @@ SELECT
 FROM
     (
     SELECT
-        c.conname::information_schema.sql_identifier AS constraint_name,
-        r.relname::information_schema.sql_identifier AS table_name,
+        c.conname AS constraint_name,
+        r.relname AS table_name,
         CASE c.contype
             WHEN 'c'::"char" THEN 'CHECK'::text
             WHEN 'f'::"char" THEN 'FOREIGN KEY'::text
@@ -46,8 +46,8 @@ UNION ALL
  SELECT
     (
       ((((nr.oid::text || '_'::text) || r.oid::text) || '_'::text) || a.attnum::text) || '_not_null'::text
-    )::information_schema.sql_identifier AS constraint_name,
-    r.relname::information_schema.sql_identifier AS table_name,
+    ) AS constraint_name,
+    r.relname AS table_name,
     'CHECK'::character varying::information_schema.character_data AS constraint_type
    FROM pg_namespace nr,
     pg_class r,
@@ -65,9 +65,9 @@ UNION ALL
       ON tc.constraint_name = kcu.constraint_name AND kcu.table_name = tc.table_name
     JOIN (
     SELECT
-    x.tblname::information_schema.sql_identifier AS table_name,
-    x.colname::information_schema.sql_identifier AS column_name,
-    x.cstrname::information_schema.sql_identifier AS constraint_name
+    x.tblname AS table_name,
+    x.colname AS column_name,
+    x.cstrname AS constraint_name
    FROM ( SELECT DISTINCT
             r.relname,
             a.attname,
