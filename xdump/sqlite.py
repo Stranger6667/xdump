@@ -21,6 +21,11 @@ def force_string(value):
 
 class SQLiteBackend(BaseBackend):
 
+    def __init__(self, *args, **kwargs):
+        if sqlite3.sqlite_version_info < (3, 8, 3):
+            raise RuntimeError('Minimum supported SQLite version is 3.8.3. You have {0}'.format(sqlite3.sqlite_version))
+        super().__init__(*args, **kwargs)
+
     def connect(self, *args, **kwargs):
         connection = sqlite3.connect(self.dbname)
         connection.row_factory = dict_factory

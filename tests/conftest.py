@@ -226,6 +226,8 @@ def backend(request):
             port=parameters['port'],
         )
     elif IS_SQLITE:
+        if sqlite3.sqlite_version_info < (3, 8, 3):
+            pytest.skip('Unsupported SQLite version')
         from xdump.sqlite import SQLiteBackend
 
         dbname = request.getfixturevalue('dbname')

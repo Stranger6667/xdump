@@ -23,6 +23,10 @@ matrix:
       env:
       - TOX_ENV=py36-sqlite
       - SQLITE_BUILD=1
+    - python: 3.6
+      env:
+        # To check old SQLite version
+      - TOX_ENV=py36-sqlite
     - python: 3.5
       env:
       - TOX_ENV=py35-postgres
