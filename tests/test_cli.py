@@ -1,6 +1,6 @@
 import pytest
-
 import yaml
+
 from tests.conftest import EMPLOYEES_SQL
 from xdump.cli import xdump
 
