@@ -121,6 +121,23 @@ class TestHighLevelInterface:
             result = backend.run("SELECT currval('groups_id_seq')")
             assert result[0]['currval'] == 2
 
+    @pytest.mark.usefixtures('schema', 'data')
+    def test_dump_schema(self, backend, archive_filename, db_helper):
+        backend.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL}, dump_data=False)
+        archive = zipfile.ZipFile(archive_filename)
+        schema = archive.read('dump/schema.sql')
+        db_helper.assert_schema(schema)
+        if DATABASE == 'postgres':
+            assert archive.namelist() == ['dump/schema.sql', 'dump/sequences.sql']
+        else:
+            assert archive.namelist() == ['dump/schema.sql']
+
+    @pytest.mark.usefixtures('schema', 'data')
+    def test_dump_data(self, backend, archive_filename):
+        backend.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL}, dump_schema=False)
+        archive = zipfile.ZipFile(archive_filename)
+        assert archive.namelist() == ['dump/data/groups.csv', 'dump/data/employees.csv']
+
 
 def test_write_schema(backend, db_helper, archive):
     backend.write_schema(archive)
