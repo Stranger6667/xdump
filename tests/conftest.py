@@ -12,8 +12,6 @@ from ._compat import patch
 
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-print(CURRENT_DIR)
-# CURRENT_DIR = Path(__file__).parent.absolute()
 EMPLOYEES_SQL = '''
 WITH RECURSIVE employees_cte AS (
   SELECT *

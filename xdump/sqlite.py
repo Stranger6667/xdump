@@ -4,8 +4,8 @@ import sqlite3
 import subprocess
 import sys
 from csv import DictReader, DictWriter
-from io import StringIO
 
+from ._compat import FileNotFoundError, StringIO
 from .base import BaseBackend
 
 
@@ -17,11 +17,6 @@ def force_string(value):
     if isinstance(value, bytes):
         value = value.decode()
     return value
-
-try:
-    FileNotFoundError
-except NameError:
-    FileNotFoundError = IOError
 
 
 class SQLiteBackend(BaseBackend):
@@ -84,7 +79,6 @@ class SQLiteBackend(BaseBackend):
         return self.run_dump(self.dbname, '.schema')
 
     def export_to_csv(self, sql):
-        from StringIO import StringIO
         output = StringIO()
         cursor = self.get_cursor()
         with self.log_query(sql):
@@ -98,7 +92,7 @@ class SQLiteBackend(BaseBackend):
     def drop_database(self, dbname):
         try:
             os.remove(dbname)
-        except (FileNotFoundError, OSError) as exc:
+        except FileNotFoundError:
             pass
 
     def create_database(self, dbname, *args, **kwargs):
