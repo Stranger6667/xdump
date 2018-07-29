@@ -148,7 +148,7 @@ class PostgreSQLBackend(BaseBackend):
         return connection
 
     def get_connection_kwargs(self, **kwargs):
-        return super().get_connection_kwargs(connection_factory=RealDictConnection, **kwargs)
+        return super(PostgreSQLBackend, self).get_connection_kwargs(connection_factory=RealDictConnection, **kwargs)
 
     def handle_run_exception(self, exc):
         """
@@ -179,7 +179,7 @@ class PostgreSQLBackend(BaseBackend):
         return process.communicate()[0]
 
     def write_initial_setup(self, file):
-        super().write_initial_setup(file)
+        super(PostgreSQLBackend, self).write_initial_setup(file)
         self.write_sequences(file)
 
     def dump_schema(self):
@@ -229,12 +229,12 @@ class PostgreSQLBackend(BaseBackend):
 
     def initial_setup(self, archive):
         search_path = self.get_search_path()
-        super().initial_setup(archive)
+        super(PostgreSQLBackend, self).initial_setup(archive)
         self.restore_search_path(search_path)
 
     def recreate_database(self, owner=None):
         self.drop_connections(self.dbname)
-        super().recreate_database(owner)
+        super(PostgreSQLBackend, self).recreate_database(owner)
 
     def drop_connections(self, dbname):
         self.run('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s', [dbname], 'maintenance')

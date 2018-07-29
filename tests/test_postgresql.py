@@ -1,8 +1,7 @@
 # coding: utf-8
-from unittest.mock import Mock, patch
-
 import pytest
 
+from ._compat import Mock, patch
 from .conftest import is_search_path_fixed
 
 

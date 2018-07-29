@@ -1,8 +1,8 @@
 # coding: utf-8
+import functools
+import os
 import zipfile
 from contextlib import contextmanager
-from functools import lru_cache
-from pathlib import Path
 from time import time
 
 import attr
@@ -10,8 +10,27 @@ import attr
 from .logging import get_logger
 
 
+def memoize(func):
+    cache = func.cache = {}
+
+    @functools.wraps(func)
+    def memoized_func(*args, **kwargs):
+        key = str(args) + str(kwargs)
+        if key not in cache:
+            cache[key] = func(*args, **kwargs)
+        return cache[key]
+
+    def cache_clear():
+        for key in list(cache):
+            cache[key].close()
+            del cache[key]
+
+    memoized_func.cache_clear = cache_clear
+    return memoized_func
+
+
 @attr.s(cmp=False)
-class BaseBackend:
+class BaseBackend(object):
     dbname = attr.ib()
     user = attr.ib()
     password = attr.ib()
@@ -46,11 +65,11 @@ class BaseBackend:
 
     # Connection
 
-    @lru_cache()
+    @memoize
     def get_connection(self, name='default'):
         return self.connect(**self.connections[name])
 
-    @lru_cache()
+    @memoize
     def get_cursor(self, name='default'):
         return self.get_connection(name).cursor()
 
@@ -251,7 +270,7 @@ class BaseBackend:
             for name in archive.namelist():
                 if name.startswith(self.data_dir):
                     fd = archive.open(name)
-                    table_name = Path(name).stem
+                    table_name = os.path.basename(name).split('.')[0]
                     self.load_data_file(table_name, fd)
 
     def load_data_file(self, table_name, fd):
