@@ -10,7 +10,7 @@ Added
 ~~~~~
 
 - Options to exclude schema or data from the dump. `#29`_
-- PyPy 3 and Python 2.7 support
+- PyPy 2 & 3 and Python 2.7 support
 
 Changed
 ~~~~~~~

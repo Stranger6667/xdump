@@ -55,6 +55,13 @@ matrix:
       env:
       - TOX_ENV=pypy3-sqlite
       - SQLITE_BUILD=1
+    - python: pypy
+      env:
+      - TOX_ENV=pypy-postgres
+    - python: pypy
+      env:
+      - TOX_ENV=pypy-sqlite
+      - SQLITE_BUILD=1
 script:
   - tox -e $TOX_ENV
 before_install:
