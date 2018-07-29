@@ -130,6 +130,8 @@ Possible options to both commands:
 - ``dump_schema`` - controls if the schema should be included
 - ``dump_data`` - controls if the data should be included
 
+NOTE. If the dump has no schema inside, DB won't be re-created.
+
 The following ``make`` command could be useful to get a configured dump from production to your local machine:
 
 .. code-block:: bash

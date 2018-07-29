@@ -84,3 +84,13 @@ def test_dump_data(archive_filename):
     call_command('xdump', archive_filename, dump_schema=False)
     archive = zipfile.ZipFile(archive_filename)
     assert archive.namelist() == ['dump/data/groups.csv', 'dump/data/employees.csv']
+
+
+def test_skip_recreate(backend, execute_file, archive_filename, db_helper):
+    call_command('xdump', archive_filename, dump_schema=False)
+
+    backend.recreate_database()
+    execute_file('sql/schema.sql', backend.get_cursor())
+
+    call_command('xload', archive_filename)
+    assert db_helper.get_tickets_count() == 0

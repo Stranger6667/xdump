@@ -3,7 +3,7 @@ import zipfile
 
 import pytest
 
-from .conftest import DATABASE, EMPLOYEES_SQL
+from .conftest import DATABASE, EMPLOYEES_SQL, IS_POSTGRES
 
 
 def test_logging(backend, capsys):
@@ -87,6 +87,13 @@ class TestHighLevelInterface:
     def dump(self, backend, archive_filename, data):
         backend.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL})
 
+    def assert_loaded_dump(self, backend, db_helper):
+        assert db_helper.get_tables_count() == 3
+        assert backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
+        if IS_POSTGRES:
+            result = backend.run("SELECT currval('groups_id_seq')")
+            assert result[0]['currval'] == 2
+
     @pytest.mark.usefixtures('schema', 'dump')
     def test_dump(self, db_helper, archive_filename):
         db_helper.assert_dump(archive_filename)
@@ -121,11 +128,7 @@ class TestHighLevelInterface:
     def test_load(self, backend, archive_filename, db_helper):
         backend.recreate_database()
         backend.load(archive_filename)
-        assert db_helper.get_tables_count() == 3
-        assert backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
-        if DATABASE == 'postgres':
-            result = backend.run("SELECT currval('groups_id_seq')")
-            assert result[0]['currval'] == 2
+        self.assert_loaded_dump(backend, db_helper)
 
     @pytest.mark.usefixtures('schema', 'data')
     def test_dump_schema(self, backend, archive_filename, db_helper):
@@ -143,6 +146,18 @@ class TestHighLevelInterface:
         backend.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL}, dump_schema=False)
         archive = zipfile.ZipFile(archive_filename)
         assert archive.namelist() == ['dump/data/groups.csv', 'dump/data/employees.csv']
+
+    @pytest.mark.usefixtures('schema', 'data')
+    def test_skip_recreate(self, backend, archive_filename, db_helper, execute_file):
+        """If there is no schema in the dump - do not recreate DB."""
+        backend.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL}, dump_schema=False)
+
+        # Suppose you already have a clean DB
+        backend.recreate_database()
+        execute_file('sql/schema.sql', backend.get_cursor())
+
+        backend.load(archive_filename)
+        self.assert_loaded_dump(backend, db_helper)
 
 
 @pytest.mark.usefixtures('schema')
