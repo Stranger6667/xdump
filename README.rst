@@ -57,6 +57,11 @@ Valid options are ``zipfile.ZIP_STORED``, ``zipfile.ZIP_DEFLATED``, ``zipfile.ZI
 
 Verbosity of the output could be customized via `verbosity` (with values 0, 1 or 2) argument of a backend class.
 
+There are two options to control the content of the dump:
+
+- ``dump_schema`` - controls if the schema should be included
+- ``dump_data`` - controls if the data should be included
+
 Automatic selection of related objects
 ++++++++++++++++++++++++++++++++++++++
 
@@ -122,6 +127,8 @@ Possible options to both commands:
 
 - ``alias`` - allows you to choose database config from DATABASES, that is used during the execution;
 - ``backend`` - importable string, that leads to custom dump backend class.
+- ``dump_schema`` - controls if the schema should be included
+- ``dump_data`` - controls if the data should be included
 
 The following ``make`` command could be useful to get a configured dump from production to your local machine:
 

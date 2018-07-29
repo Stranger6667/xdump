@@ -1,4 +1,6 @@
 # coding: utf-8
+import zipfile
+
 import pytest
 from django.core.management import call_command
 
@@ -65,3 +67,20 @@ def test_xload(archive_filename, db_helper):
     assert db_helper.get_tickets_count() == 5
     call_command('xload', archive_filename)
     assert db_helper.get_tickets_count() == 0
+
+
+def test_dump_schema(archive_filename, db_helper):
+    call_command('xdump', archive_filename, dump_data=False)
+    archive = zipfile.ZipFile(archive_filename)
+    schema = archive.read('dump/schema.sql')
+    db_helper.assert_schema(schema)
+    if IS_POSTGRES:
+        assert archive.namelist() == ['dump/schema.sql', 'dump/sequences.sql']
+    else:
+        assert archive.namelist() == ['dump/schema.sql']
+
+
+def test_dump_data(archive_filename):
+    call_command('xdump', archive_filename, dump_schema=False)
+    archive = zipfile.ZipFile(archive_filename)
+    assert archive.namelist() == ['dump/data/groups.csv', 'dump/data/employees.csv']

@@ -5,6 +5,6 @@ from ..core import XDumpCommand
 class Command(XDumpCommand):
     help = 'Loads an SQL dump.'
 
-    def _handle(self, filename, backend):
+    def _handle(self, filename, backend, **options):
         backend.recreate_database()
         backend.load(filename)

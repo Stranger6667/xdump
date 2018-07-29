@@ -29,11 +29,11 @@ class XDumpCommand(BaseCommand):
             default=None,
         )
 
-    def handle(self, filename, **options):
-        backend = self.get_xdump_backend(options['alias'], options['backend'], options['verbosity'])
-        self._handle(filename, backend)
+    def handle(self, filename, alias, backend, verbosity, **options):
+        backend = self.get_xdump_backend(alias, backend, verbosity)
+        self._handle(filename, backend, **options)
 
-    def _handle(self, filename, backend):
+    def _handle(self, filename, backend, **options):
         raise NotImplementedError
 
     def get_xdump_backend(self, alias='default', backend=None, verbosity=0):
