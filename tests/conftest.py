@@ -1,7 +1,6 @@
 import os
 import platform
 import sqlite3
-import sys
 import zipfile
 from contextlib import contextmanager
 
@@ -218,7 +217,7 @@ def backend(request):
         from xdump.postgresql import PostgreSQLBackend
 
         postgresql = request.getfixturevalue('postgresql')
-        if platform.python_implementation() == 'PyPy' and sys.version_info[0] == 3:
+        if platform.python_implementation() == 'PyPy':
             parameters = dict(item.split('=') for item in postgresql.dsn.split())
         else:
             parameters = postgresql.get_dsn_parameters()
