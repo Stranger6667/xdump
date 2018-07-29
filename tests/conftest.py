@@ -1,5 +1,7 @@
 import os
+import platform
 import sqlite3
+import sys
 import zipfile
 from contextlib import contextmanager
 from pathlib import Path
@@ -7,7 +9,6 @@ from unittest.mock import patch
 
 import attr
 import pytest
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 
 CURRENT_DIR = Path(__file__).parent.absolute()
@@ -217,7 +218,10 @@ def backend(request):
         from xdump.postgresql import PostgreSQLBackend
 
         postgresql = request.getfixturevalue('postgresql')
-        parameters = postgresql.get_dsn_parameters()
+        if platform.python_implementation() == 'PyPy' and sys.version_info[0] == 3:
+            parameters = dict(item.split('=') for item in postgresql.dsn.split())
+        else:
+            parameters = postgresql.get_dsn_parameters()
         return PostgreSQLBackend(
             dbname=parameters['dbname'],
             user=parameters['user'],
@@ -251,6 +255,8 @@ def db_helper(request, backend):
 @pytest.fixture
 def cursor(request):
     if IS_POSTGRES:
+        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
         postgresql = request.getfixturevalue('postgresql')
         postgresql.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         return postgresql.cursor()
