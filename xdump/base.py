@@ -1,5 +1,4 @@
 # coding: utf-8
-import functools
 import os
 import zipfile
 from contextlib import contextmanager
@@ -7,26 +6,8 @@ from time import time
 
 import attr
 
+from ._compat import lru_cache
 from .logging import get_logger
-
-
-def memoize(func):
-    cache = func.cache = {}
-
-    @functools.wraps(func)
-    def memoized_func(*args, **kwargs):
-        key = str(args) + str(kwargs)
-        if key not in cache:
-            cache[key] = func(*args, **kwargs)
-        return cache[key]
-
-    def cache_clear():
-        for key in list(cache):
-            cache[key].close()
-            del cache[key]
-
-    memoized_func.cache_clear = cache_clear
-    return memoized_func
 
 
 @attr.s(cmp=False)
@@ -65,11 +46,11 @@ class BaseBackend(object):
 
     # Connection
 
-    @memoize
+    @lru_cache()
     def get_connection(self, name='default'):
         return self.connect(**self.connections[name])
 
-    @memoize
+    @lru_cache()
     def get_cursor(self, name='default'):
         return self.get_connection(name).cursor()
 

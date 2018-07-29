@@ -87,7 +87,9 @@ class SQLiteBackend(BaseBackend):
         writer = DictWriter(output, fieldnames=[column[0] for column in cursor.description], lineterminator='\n')
         writer.writeheader()
         writer.writerows(data)
-        return output.getvalue().encode()
+        result = output.getvalue().encode()
+        output.close()  # StringIO doesn't support context manager protocol on Python 2
+        return result
 
     def drop_database(self, dbname):
         try:
