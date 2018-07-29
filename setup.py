@@ -1,4 +1,6 @@
 # coding: utf-8
+import sys
+
 from setuptools import setup
 
 import xdump
@@ -7,6 +9,9 @@ import xdump
 with open('README.rst') as file:
     long_description = file.read()
 
+install_requires = ['attrs', 'psycopg2']
+if sys.version_info[0] == 2:
+    install_requires.append('repoze.lru==0.7')
 
 setup(
     name='xdump',
@@ -36,7 +41,7 @@ setup(
         'Programming Language :: Python :: Implementation :: CPython',
     ],
     include_package_data=True,
-    install_requires=['attrs', 'psycopg2'],
+    install_requires=install_requires,
     extras_require={
         'django':  ['django>=1.11'],
     }

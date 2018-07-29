@@ -1,11 +1,11 @@
 # coding: utf-8
+import os
 import sqlite3
 import subprocess
 import sys
 from csv import DictReader, DictWriter
-from io import StringIO
-from pathlib import Path
 
+from ._compat import FileNotFoundError, StringIO
 from .base import BaseBackend
 
 
@@ -24,7 +24,7 @@ class SQLiteBackend(BaseBackend):
     def __init__(self, *args, **kwargs):
         if sqlite3.sqlite_version_info < (3, 8, 3):
             raise RuntimeError('Minimum supported SQLite version is 3.8.3. You have {0}'.format(sqlite3.sqlite_version))
-        super().__init__(*args, **kwargs)
+        super(SQLiteBackend, self).__init__(*args, **kwargs)
 
     def connect(self, *args, **kwargs):
         connection = sqlite3.connect(self.dbname)
@@ -41,7 +41,7 @@ class SQLiteBackend(BaseBackend):
 
     def run(self, sql, params=(), using='default'):
         sql = force_string(sql)
-        return super().run(sql, params, using)
+        return super(SQLiteBackend, self).run(sql, params, using)
 
     def run_many(self, sql):
         with self.log_query(sql):
@@ -73,25 +73,27 @@ class SQLiteBackend(BaseBackend):
 
     def dump(self, *args, **kwargs):
         self.begin_immediate()
-        super().dump(*args, **kwargs)
+        super(SQLiteBackend, self).dump(*args, **kwargs)
 
     def dump_schema(self):
         return self.run_dump(self.dbname, '.schema')
 
     def export_to_csv(self, sql):
-        with StringIO() as output:
-            cursor = self.get_cursor()
-            with self.log_query(sql):
-                cursor.execute(sql)
-                data = cursor.fetchall()
-            writer = DictWriter(output, fieldnames=[column[0] for column in cursor.description], lineterminator='\n')
-            writer.writeheader()
-            writer.writerows(data)
-            return output.getvalue().encode()
+        output = StringIO()
+        cursor = self.get_cursor()
+        with self.log_query(sql):
+            cursor.execute(sql)
+            data = cursor.fetchall()
+        writer = DictWriter(output, fieldnames=[column[0] for column in cursor.description], lineterminator='\n')
+        writer.writeheader()
+        writer.writerows(data)
+        result = output.getvalue().encode()
+        output.close()  # StringIO doesn't support context manager protocol on Python 2
+        return result
 
     def drop_database(self, dbname):
         try:
-            Path(dbname).unlink()
+            os.remove(dbname)
         except FileNotFoundError:
             pass
 
@@ -109,7 +111,7 @@ class SQLiteBackend(BaseBackend):
         for name in archive.namelist():
             if name.startswith(self.data_dir):
                 fd = archive.open(name)
-                filename = Path(name).stem
+                filename = os.path.basename(name).split('.')[0]
                 self.load_data_file(filename, fd)
 
     def load_data_file(self, table_name, fd):

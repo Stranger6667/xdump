@@ -4,14 +4,14 @@ import sqlite3
 import sys
 import zipfile
 from contextlib import contextmanager
-from pathlib import Path
-from unittest.mock import patch
 
 import attr
 import pytest
 
+from ._compat import patch
 
-CURRENT_DIR = Path(__file__).parent.absolute()
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 EMPLOYEES_SQL = '''
 WITH RECURSIVE employees_cte AS (
   SELECT *
@@ -60,7 +60,7 @@ def dbname(tmpdir):
 
 
 @attr.s(cmp=False)
-class BackendWrapper:
+class BackendWrapper(object):
     """
     Runs special commands for specific DB backend, that are useful for testing.
     """
@@ -185,7 +185,7 @@ class PostgreSQLWrapper(BackendWrapper):
 class SQLiteWrapper(BackendWrapper):
 
     def is_database_exists(self, dbname):
-        return Path(dbname).exists()
+        return os.path.exists(dbname)
 
     def assert_namelist(self, archive):
         assert archive.namelist() == ['dump/schema.sql', 'dump/data/groups.csv', 'dump/data/employees.csv']
@@ -201,13 +201,13 @@ class SQLiteWrapper(BackendWrapper):
         return str(tmpdir.join('test_xxx.db'))
 
     def _get_concurrent_insert_class(self, query):
-        base_class = super()._get_concurrent_insert_class(query)
+        base_class = super(SQLiteWrapper, self)._get_concurrent_insert_class(query)
 
         class ConcurrentInsertEmulator(base_class):
 
             def _insert(self):
                 with pytest.raises(sqlite3.OperationalError, message='database is locked'):
-                    return super()._insert()
+                    return base_class._insert(self)
 
         return ConcurrentInsertEmulator
 
@@ -266,7 +266,7 @@ def cursor(request):
 
 
 def read_sql_file(filename):
-    with (CURRENT_DIR / filename).open('r') as fd:
+    with open(os.path.join(CURRENT_DIR, filename)) as fd:
         return fd.read()
 
 

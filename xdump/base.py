@@ -1,17 +1,17 @@
 # coding: utf-8
+import os
 import zipfile
 from contextlib import contextmanager
-from functools import lru_cache
-from pathlib import Path
 from time import time
 
 import attr
 
+from ._compat import lru_cache
 from .logging import get_logger
 
 
 @attr.s(cmp=False)
-class BaseBackend:
+class BaseBackend(object):
     dbname = attr.ib()
     user = attr.ib()
     password = attr.ib()
@@ -251,7 +251,7 @@ class BaseBackend:
             for name in archive.namelist():
                 if name.startswith(self.data_dir):
                     fd = archive.open(name)
-                    table_name = Path(name).stem
+                    table_name = os.path.basename(name).split('.')[0]
                     self.load_data_file(table_name, fd)
 
     def load_data_file(self, table_name, fd):
