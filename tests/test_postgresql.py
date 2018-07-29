@@ -1,7 +1,6 @@
 # coding: utf-8
 from unittest.mock import Mock, patch
 
-import psycopg2
 import pytest
 
 from .conftest import is_search_path_fixed
@@ -17,6 +16,8 @@ def test_write_sequences(backend, archive, db_helper):
 
 
 def test_handling_error(backend):
+    import psycopg2
+
     with patch('psycopg2.extras.DictCursorBase.fetchall', side_effect=psycopg2.ProgrammingError), \
             pytest.raises(psycopg2.ProgrammingError):
         backend.run('BEGIN')

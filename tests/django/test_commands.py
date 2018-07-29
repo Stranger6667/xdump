@@ -2,7 +2,6 @@
 import pytest
 from django.core.management import call_command
 
-from xdump.postgresql import PostgreSQLBackend
 from xdump.sqlite import SQLiteBackend
 
 from ..conftest import EMPLOYEES_SQL, IS_POSTGRES, IS_SQLITE
@@ -37,6 +36,8 @@ def test_xdump(db_helper, archive_filename):
 
 
 if IS_POSTGRES:
+    from xdump.postgresql import PostgreSQLBackend
+
     class CustomBackend(PostgreSQLBackend):
         pass
 elif IS_SQLITE:
