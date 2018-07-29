@@ -15,7 +15,7 @@ Added
 Changed
 ~~~~~~~
 
-- SQLite < 3.8.3 is unsupported explicitly. ``RuntimeError`` is raised with that SQLite version. `#13`_
+- SQLite < 3.8.3 is unsupported explicitly. ``RuntimeError`` is raised with unsupported SQLite version. `#13`_
 
 `0.4.0`_ - 2018-07-23
 ---------------------
