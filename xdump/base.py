@@ -22,8 +22,6 @@ class BaseBackend(object):
     schema_filename = 'dump/schema.sql'
     initial_setup_files = (schema_filename, )
     data_dir = 'dump/data/'
-    non_recursive_relations_query = None
-    recursive_relations_query = None
 
     @property
     def logger(self):
@@ -153,8 +151,7 @@ class BaseBackend(object):
         """
         Looks for foreign keys in the given table. Excluding ones, that will be dumped in ``full_tables``.
         """
-        query = self.recursive_relations_query if recursive else self.non_recursive_relations_query
-        return self.run(query, {'table_name': table, 'full_tables': list(full_tables)})
+        raise NotImplementedError
 
     def get_related_data_sql(self, foreign_key, full_tables, partial_tables):
         """
