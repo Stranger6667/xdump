@@ -209,13 +209,9 @@ class PostgreSQLBackend(BaseBackend):
         super(PostgreSQLBackend, self).add_related_data(full_tables, partial_tables)
 
     def get_foreign_keys(self, table, full_tables=(), recursive=False):
-        """
-        Looks for foreign keys in the given table. Excluding ones, that will be dumped in ``full_tables``.
-        """
+        # NOTE, `full_tables` is not used, because it is filtered in `BASE_RELATIONS_QUERY`
         for foreign_key in self._related_data:
             if foreign_key['table_name'] == table:
-                if foreign_key['foreign_table_name'] in full_tables:
-                    continue
                 if foreign_key['foreign_table_name'] == table and not recursive:
                     continue
                 if foreign_key['foreign_table_name'] != table and recursive:
