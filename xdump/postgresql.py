@@ -120,8 +120,6 @@ UNION ALL
       ON ccu.constraint_name = tc.constraint_name
 WHERE
     constraint_type = 'FOREIGN KEY' AND
-    tc.table_name {operator} ccu.table_name AND
-    tc.table_name = %(table_name)s AND
     NOT(ccu.table_name = ANY(%(full_tables)s))
 '''
 
@@ -138,8 +136,6 @@ class PostgreSQLBackend(BaseBackend):
             'isolation_level': ISOLATION_LEVEL_AUTOCOMMIT,
         }
     }
-    non_recursive_relations_query = BASE_RELATIONS_QUERY.format(operator='!=')
-    recursive_relations_query = BASE_RELATIONS_QUERY.format(operator='=')
 
     def connect(self, isolation_level, **kwargs):
         kwargs = self.get_connection_kwargs(**kwargs)
@@ -207,6 +203,20 @@ class PostgreSQLBackend(BaseBackend):
     def write_sequences(self, file):
         sequences = self.dump_sequences()
         file.writestr(self.sequences_filename, sequences)
+
+    def add_related_data(self, full_tables, partial_tables):
+        self._related_data = self.run(BASE_RELATIONS_QUERY, {'full_tables': list(full_tables)})
+        super(PostgreSQLBackend, self).add_related_data(full_tables, partial_tables)
+
+    def get_foreign_keys(self, table, full_tables=(), recursive=False):
+        # NOTE, `full_tables` is not used, because it is filtered in `BASE_RELATIONS_QUERY`
+        for foreign_key in self._related_data:
+            if foreign_key['table_name'] == table:
+                if foreign_key['foreign_table_name'] == table and not recursive:
+                    continue
+                if foreign_key['foreign_table_name'] != table and recursive:
+                    continue
+                yield foreign_key
 
     def copy_expert(self, sql, file, **kwargs):
         with self.log_query(sql):

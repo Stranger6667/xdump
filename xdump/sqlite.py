@@ -5,7 +5,7 @@ import subprocess
 import sys
 from csv import DictReader, DictWriter
 
-from ._compat import FileNotFoundError, StringIO
+from ._compat import FileNotFoundError, StringIO, lru_cache
 from .base import BaseBackend
 
 
@@ -53,8 +53,12 @@ class SQLiteBackend(BaseBackend):
         cursor = self.get_cursor()
         cursor.execute('BEGIN IMMEDIATE')
 
+    @lru_cache()
+    def _get_foreign_keys(self, table):
+        return self.run('PRAGMA foreign_key_list({})'.format(table))
+
     def get_foreign_keys(self, table, full_tables=(), recursive=False):
-        for foreign_key in self.run('PRAGMA foreign_key_list({})'.format(table)):
+        for foreign_key in self._get_foreign_keys(table):
             if foreign_key['table'] in full_tables:
                 continue
             if foreign_key['table'] == table and not recursive:
