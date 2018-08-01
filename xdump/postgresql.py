@@ -17,57 +17,47 @@ SEQUENCES_SQL = "SELECT relname FROM pg_class WHERE relkind = 'S'"
 # Subqueries for constraints other than FOREIGN KEY are removed as well.
 BASE_RELATIONS_QUERY = '''
 SELECT
-    DISTINCT
-    tc.constraint_name, tc.table_name, kcu.column_name,
-    ccu.table_name AS foreign_table_name,
-    ccu.column_name AS foreign_column_name
+  DISTINCT
+  tc.constraint_name, 
+  tc.table_name, 
+  kcu.column_name,
+  ccu.table_name AS foreign_table_name,
+  ccu.column_name AS foreign_column_name
 FROM
-    (
+  (
     SELECT
-        c.conname AS constraint_name,
-        r.relname AS table_name,
-        'FOREIGN KEY'::text AS constraint_type
-   FROM pg_namespace nc,
-    pg_namespace nr,
-    pg_constraint c,
-    pg_class r
-  WHERE
-    nc.oid = c.connamespace AND
-    nr.oid = r.relnamespace AND
-    c.conrelid = r.oid AND
-    c.contype = 'f'::"char" AND
-    r.relkind = 'r'::"char" AND 
-    NOT pg_is_other_temp_schema(nr.oid)
+      c.conname AS constraint_name,
+      r.relname AS table_name
+    FROM pg_namespace nr,
+      pg_constraint c,
+      pg_class r
+    WHERE
+      nr.oid = r.relnamespace AND
+      c.conrelid = r.oid AND
+      c.contype = 'f'::"char" AND
+      r.relkind = 'r'::"char" AND 
+      NOT pg_is_other_temp_schema(nr.oid)
     ) AS tc
     JOIN information_schema.key_column_usage AS kcu
       ON tc.constraint_name = kcu.constraint_name AND 
          kcu.table_name = tc.table_name
     JOIN (
-    SELECT
-    x.tblname AS table_name,
-    x.colname AS column_name,
-    x.cstrname AS constraint_name
-   FROM (
-         SELECT
-            r.relname,
-            a.attname,
-            c.conname
-           FROM pg_namespace nr,
-            pg_class r,
-            pg_attribute a,
-            pg_namespace nc,
-            pg_constraint c
-          WHERE
-            nr.oid = r.relnamespace AND
-            r.oid = a.attrelid AND
-            nc.oid = c.connamespace AND
-            r.oid = c.confrelid AND (a.attnum = ANY (c.confkey)) AND
-            NOT a.attisdropped AND
-            c.contype = 'f'::"char" AND
-            r.relkind = 'r'::"char"
-        ) x(tblname, colname, cstrname)
-    ) AS ccu
-      ON ccu.constraint_name = tc.constraint_name
+      SELECT
+        r.relname AS table_name,
+        a.attname AS column_name,
+        c.conname AS constraint_name
+      FROM pg_class r,
+        pg_attribute a,
+        pg_constraint c
+      WHERE
+        r.oid = a.attrelid AND
+        r.oid = c.confrelid AND 
+        a.attnum = ANY (c.confkey) AND
+        NOT a.attisdropped AND
+        c.contype = 'f'::"char" AND
+        r.relkind = 'r'::"char"
+      ) AS ccu
+    ON ccu.constraint_name = tc.constraint_name
 WHERE
   NOT(ccu.table_name = ANY(%(full_tables)s))
 '''
