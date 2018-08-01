@@ -17,6 +17,7 @@ Changed
 
 - SQLite < 3.8.3 is unsupported explicitly. ``RuntimeError`` is raised with unsupported SQLite version. `#13`_
 - Relation's data loading is optimized. `#25`_
+- Relation's query for PostgreSQL is optimized. `#45`_
 
 `0.4.0`_ - 2018-07-23
 ---------------------
@@ -87,6 +88,7 @@ Fixed
 .. _0.1.2: https://github.com/Stranger6667/xdump/compare/0.1.1...0.1.2
 .. _0.1.1: https://github.com/Stranger6667/xdump/compare/0.1.0...0.1.1
 
+.. _#45: https://github.com/Stranger6667/xdump/issues/45
 .. _#29: https://github.com/Stranger6667/xdump/issues/29
 .. _#25: https://github.com/Stranger6667/xdump/issues/25
 .. _#22: https://github.com/Stranger6667/xdump/issues/22
