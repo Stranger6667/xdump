@@ -18,8 +18,8 @@ SEQUENCES_SQL = "SELECT relname FROM pg_class WHERE relkind = 'S'"
 BASE_RELATIONS_QUERY = '''
 SELECT
   DISTINCT
-  TC.constraint_name, 
-  TC.table_name, 
+  TC.constraint_name,
+  TC.table_name,
   KCU.column_name,
   CCU.foreign_table_name,
   CCU.foreign_column_name
@@ -35,11 +35,11 @@ FROM
       NS.oid = CL.relnamespace AND
       CN.conrelid = CL.oid AND
       CN.contype = 'f' AND
-      CL.relkind = 'r' AND 
+      CL.relkind = 'r' AND
       NOT pg_is_other_temp_schema(NS.oid)
     ) AS TC
     JOIN information_schema.key_column_usage AS KCU
-      ON TC.constraint_name = KCU.constraint_name AND 
+      ON TC.constraint_name = KCU.constraint_name AND
          KCU.table_name = TC.table_name
     JOIN (
       SELECT
@@ -51,7 +51,7 @@ FROM
         pg_constraint CN
       WHERE
         CL.oid = AT.attrelid AND
-        CL.oid = CN.confrelid AND 
+        CL.oid = CN.confrelid AND
         AT.attnum = ANY (CN.confkey) AND
         NOT AT.attisdropped AND
         CN.contype = 'f' AND
@@ -143,7 +143,7 @@ class PostgreSQLBackend(BaseBackend):
 
     def add_related_data(self, full_tables, partial_tables):
         if full_tables:
-            query = f'{BASE_RELATIONS_QUERY} WHERE NOT(CCU.foreign_table_name = ANY(%(full_tables)s))'
+            query = BASE_RELATIONS_QUERY + ' WHERE NOT(CCU.foreign_table_name = ANY(%(full_tables)s))'
             kwargs = {'full_tables': list(full_tables)}
         else:
             query = BASE_RELATIONS_QUERY
