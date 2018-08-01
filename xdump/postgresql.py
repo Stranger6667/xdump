@@ -14,6 +14,7 @@ from .utils import make_options
 SEQUENCES_SQL = "SELECT relname FROM pg_class WHERE relkind = 'S'"
 # The query below doesn't use `information_schema.table_constraints` and ``, but instead uses its modified versions
 # to mitigate permissions insufficiency on that views (they filter data by permissions of the current user)
+# Subqueries for constraints other than FOREIGN KEY are removed as well.
 BASE_RELATIONS_QUERY = '''
 SELECT
     DISTINCT
@@ -25,13 +26,7 @@ FROM
     SELECT
         c.conname AS constraint_name,
         r.relname AS table_name,
-        CASE c.contype
-            WHEN 'c'::"char" THEN 'CHECK'::text
-            WHEN 'f'::"char" THEN 'FOREIGN KEY'::text
-            WHEN 'p'::"char" THEN 'PRIMARY KEY'::text
-            WHEN 'u'::"char" THEN 'UNIQUE'::text
-            ELSE NULL::text
-        END::information_schema.character_data AS constraint_type
+        'FOREIGN KEY'::text AS constraint_type
    FROM pg_namespace nc,
     pg_namespace nr,
     pg_constraint c,
@@ -40,39 +35,19 @@ FROM
     nc.oid = c.connamespace AND
     nr.oid = r.relnamespace AND
     c.conrelid = r.oid AND
-    (c.contype <> ALL (ARRAY['t'::"char", 'x'::"char"])) AND
-    r.relkind = 'r'::"char" AND NOT pg_is_other_temp_schema(nr.oid)
+    c.contype = 'f'::"char" AND
+    r.relkind = 'r'::"char" AND 
+    NOT pg_is_other_temp_schema(nr.oid)
     ) AS tc
     JOIN information_schema.key_column_usage AS kcu
-      ON tc.constraint_name = kcu.constraint_name AND kcu.table_name = tc.table_name
+      ON tc.constraint_name = kcu.constraint_name AND 
+         kcu.table_name = tc.table_name
     JOIN (
     SELECT
     x.tblname AS table_name,
     x.colname AS column_name,
     x.cstrname AS constraint_name
-   FROM ( SELECT DISTINCT
-            r.relname,
-            a.attname,
-            c.conname
-           FROM pg_namespace nr,
-            pg_class r,
-            pg_attribute a,
-            pg_depend d,
-            pg_namespace nc,
-            pg_constraint c
-          WHERE
-            nr.oid = r.relnamespace AND
-            r.oid = a.attrelid AND
-            d.refclassid = 'pg_class'::regclass::oid AND
-            d.refobjid = r.oid AND
-            d.refobjsubid = a.attnum AND
-            d.classid = 'pg_constraint'::regclass::oid AND
-            d.objid = c.oid AND
-            c.connamespace = nc.oid AND
-            c.contype = 'c'::"char" AND
-            r.relkind = 'r'::"char" AND
-            NOT a.attisdropped
-        UNION ALL
+   FROM (
          SELECT
             r.relname,
             a.attname,
@@ -86,23 +61,15 @@ FROM
             nr.oid = r.relnamespace AND
             r.oid = a.attrelid AND
             nc.oid = c.connamespace AND
-            CASE
-              WHEN c.contype = 'f'::"char"
-                THEN
-                  r.oid = c.confrelid AND (a.attnum = ANY (c.confkey))
-                ELSE
-                  r.oid = c.conrelid AND (a.attnum = ANY (c.conkey))
-            END AND
+            r.oid = c.confrelid AND (a.attnum = ANY (c.confkey)) AND
             NOT a.attisdropped AND
-            (
-              c.contype = ANY (ARRAY['p'::"char", 'u'::"char", 'f'::"char"])) AND
-              r.relkind = 'r'::"char"
-            ) x(tblname, colname, cstrname)
+            c.contype = 'f'::"char" AND
+            r.relkind = 'r'::"char"
+        ) x(tblname, colname, cstrname)
     ) AS ccu
       ON ccu.constraint_name = tc.constraint_name
 WHERE
-    constraint_type = 'FOREIGN KEY' AND
-    NOT(ccu.table_name = ANY(%(full_tables)s))
+  NOT(ccu.table_name = ANY(%(full_tables)s))
 '''
 
 
