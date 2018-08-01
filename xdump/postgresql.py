@@ -58,8 +58,6 @@ FROM
         CL.relkind = 'r'
       ) AS CCU
     ON CCU.constraint_name = TC.constraint_name
-WHERE
-  NOT(CCU.foreign_table_name = ANY(%(full_tables)s))
 '''
 
 
@@ -144,7 +142,13 @@ class PostgreSQLBackend(BaseBackend):
         file.writestr(self.sequences_filename, sequences)
 
     def add_related_data(self, full_tables, partial_tables):
-        self._related_data = self.run(BASE_RELATIONS_QUERY, {'full_tables': list(full_tables)})
+        if full_tables:
+            query = f'{BASE_RELATIONS_QUERY} WHERE NOT(CCU.foreign_table_name = ANY(%(full_tables)s))'
+            kwargs = {'full_tables': list(full_tables)}
+        else:
+            query = BASE_RELATIONS_QUERY
+            kwargs = {}
+        self._related_data = self.run(query, kwargs)
         super(PostgreSQLBackend, self).add_related_data(full_tables, partial_tables)
 
     def get_foreign_keys(self, table, full_tables=(), recursive=False):
