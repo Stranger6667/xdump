@@ -75,9 +75,10 @@ class SQLiteBackend(BaseBackend):
             # Before 3.6 sqlite3 used to implicitly commit an open transaction in this case.
             self.begin_immediate()
 
-    def dump(self, *args, **kwargs):
+    def dump(self, filename, full_tables=(), partial_tables=None, **kwargs):
+        self.input_check(full_tables, partial_tables)
         self.begin_immediate()
-        super(SQLiteBackend, self).dump(*args, **kwargs)
+        super(SQLiteBackend, self).dump(filename, full_tables=full_tables, partial_tables=partial_tables, **kwargs)
 
     def dump_schema(self):
         return self.run_dump(self.dbname, '.schema')
