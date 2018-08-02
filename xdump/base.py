@@ -103,6 +103,7 @@ class BaseBackend(object):
         """
         Creates a dump, which could be used to restore the database.
         """
+        self.input_check(full_tables, partial_tables)
         with self.log_time('Total execution time: %s'):
             partial_tables = partial_tables or {}
             with zipfile.ZipFile(filename, 'w', compression) as file:
@@ -112,6 +113,16 @@ class BaseBackend(object):
                     self.add_related_data(full_tables, partial_tables)
                     self.write_full_tables(file, full_tables)
                     self.write_partial_tables(file, partial_tables)
+
+    def input_check(self, full_tables, partial_tables):
+        if full_tables and partial_tables:
+            common_tables = set(full_tables) & set(partial_tables)
+            if common_tables:
+                raise ValueError(
+                    '`partial_tables` should not contain tables from `full_tables`. Common tables: {tables}'.format(
+                        tables=', '.join(common_tables)
+                    )
+                )
 
     def add_related_data(self, full_tables, partial_tables):
         """

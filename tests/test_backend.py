@@ -91,6 +91,14 @@ class TestHighLevelInterface:
     def test_dump(self, db_helper, archive_filename):
         db_helper.assert_dump(archive_filename)
 
+    @pytest.mark.usefixtures('schema', 'dump')
+    def test_keys_intersection_error(self, recwarn, backend, archive_filename):
+        """If any keys from `partial_tables` is contained in `full_tables` - an error should be raised."""
+        with pytest.raises(ValueError) as exc:
+            backend.dump(archive_filename, ['employees'], {'employees': EMPLOYEES_SQL})
+            assert not recwarn  # If a file in the archive is written more than 1 time, a UserWarning is emitted
+        assert "`partial_tables` should not contain tables from `full_tables`. Common tables: employees" in str(exc)
+
     @pytest.mark.usefixtures('schema', 'data')
     def test_transaction(self, backend, archive_filename, db_helper):
         """
