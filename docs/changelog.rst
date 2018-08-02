@@ -6,6 +6,9 @@ Changelog
 `Unreleased`_
 -------------
 
+`0.5.0`_ - 2018-08-02
+---------------------
+
 Added
 ~~~~~
 
@@ -81,7 +84,8 @@ Fixed
 
 - Initial release.
 
-.. _Unreleased: https://github.com/Stranger6667/xdump/compare/0.4.0...HEAD
+.. _Unreleased: https://github.com/Stranger6667/xdump/compare/0.5.0...HEAD
+.. _0.5.0: https://github.com/Stranger6667/xdump/compare/0.4.0...0.5.0
 .. _0.4.0: https://github.com/Stranger6667/xdump/compare/0.3.1...0.4.0
 .. _0.3.1: https://github.com/Stranger6667/xdump/compare/0.3.0...0.3.1
 .. _0.3.0: https://github.com/Stranger6667/xdump/compare/0.2.0...0.3.0
