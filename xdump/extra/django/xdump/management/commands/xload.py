@@ -7,6 +7,5 @@ class Command(XDumpCommand):
 
     def _handle(self, filename, backend, **options):
         if not backend.is_dump_without_schema(filename):
-            print('XXX')
             backend.recreate_database()
         backend.load(filename)

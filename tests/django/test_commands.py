@@ -91,6 +91,7 @@ def test_skip_recreate(backend, execute_file, archive_filename, db_helper):
 
     backend.recreate_database()
     execute_file('sql/schema.sql', backend.get_cursor())
+    backend.run('COMMIT')
 
     call_command('xload', archive_filename)
     assert db_helper.get_tickets_count() == 0

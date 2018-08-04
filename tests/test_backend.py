@@ -87,13 +87,6 @@ class TestHighLevelInterface:
     def dump(self, backend, archive_filename, data):
         backend.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL})
 
-    def assert_loaded_dump(self, backend, db_helper):
-        assert db_helper.get_tables_count() == 3
-        assert backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
-        if IS_POSTGRES:
-            result = backend.run("SELECT currval('groups_id_seq')")
-            assert result[0]['currval'] == 2
-
     @pytest.mark.usefixtures('schema', 'dump')
     def test_dump(self, db_helper, archive_filename):
         db_helper.assert_dump(archive_filename)
@@ -128,7 +121,11 @@ class TestHighLevelInterface:
     def test_load(self, backend, archive_filename, db_helper):
         backend.recreate_database()
         backend.load(archive_filename)
-        self.assert_loaded_dump(backend, db_helper)
+        assert db_helper.get_tables_count() == 3
+        assert backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
+        if IS_POSTGRES:
+            result = backend.run("SELECT currval('groups_id_seq')")
+            assert result[0]['currval'] == 2
 
     @pytest.mark.usefixtures('schema', 'data')
     def test_dump_schema(self, backend, archive_filename, db_helper):
@@ -157,7 +154,12 @@ class TestHighLevelInterface:
         execute_file('sql/schema.sql', backend.get_cursor())
 
         backend.load(archive_filename)
-        self.assert_loaded_dump(backend, db_helper)
+        assert db_helper.get_tables_count() == 3
+        assert backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
+        if IS_POSTGRES:
+            # Sequences are not reset automatically - the user is responsible for doing this
+            result = backend.run("SELECT nextval('groups_id_seq')")
+            assert result[0]['nextval'] == 1
 
 
 @pytest.mark.usefixtures('schema')
