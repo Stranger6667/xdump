@@ -6,6 +6,11 @@ Changelog
 `Unreleased`_
 -------------
 
+Changed
+~~~~~~~
+
+- Do not recreate the DB if it the schema is absent in the dump. `#39`_
+
 `0.5.0`_ - 2018-08-02
 ---------------------
 
@@ -95,6 +100,7 @@ Fixed
 
 .. _#45: https://github.com/Stranger6667/xdump/issues/45
 .. _#44: https://github.com/Stranger6667/xdump/issues/44
+.. _#39: https://github.com/Stranger6667/xdump/issues/39
 .. _#29: https://github.com/Stranger6667/xdump/issues/29
 .. _#25: https://github.com/Stranger6667/xdump/issues/25
 .. _#22: https://github.com/Stranger6667/xdump/issues/22
