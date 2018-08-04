@@ -229,6 +229,10 @@ class BaseBackend(object):
     def create_database(self, dbname, *args, **kwargs):
         raise NotImplementedError
 
+    def truncate(self):
+        """Truncates all tables in the DB. Alternative for the re-creation option"""
+        raise NotImplementedError
+
     # Loading the dump
 
     def load(self, filename):

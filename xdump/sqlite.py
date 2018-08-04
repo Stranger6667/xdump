@@ -19,6 +19,9 @@ def force_string(value):
     return value
 
 
+TABLES_SQL = "SELECT name AS table_name FROM sqlite_master WHERE type='table'"
+
+
 class SQLiteBackend(BaseBackend):
 
     def __init__(self, *args, **kwargs):
@@ -35,9 +38,13 @@ class SQLiteBackend(BaseBackend):
         process = subprocess.Popen(('sqlite3', ) + args, stdout=subprocess.PIPE)
         return process.communicate()[0]
 
+    @property
+    def tables(self):
+        return [result['table_name'] for result in self.run(TABLES_SQL)]
+
     def get_tables_for_related_data(self, full_tables, partial_tables):
-        for result in self.run("SELECT name AS table_name FROM sqlite_master WHERE type='table'"):
-            yield result['table_name']
+        # Return all tables for SQLite
+        return self.tables
 
     def run(self, sql, params=(), using='default'):
         sql = force_string(sql)
@@ -104,6 +111,15 @@ class SQLiteBackend(BaseBackend):
 
     def create_database(self, dbname, *args, **kwargs):
         with sqlite3.connect(dbname):
+            pass
+
+    def truncate(self):
+        for table in self.tables:
+            self.run('DELETE FROM {0}'.format(table))
+        try:
+            self.run('UPDATE sqlite_sequence SET seq=0')
+        except sqlite3.OperationalError:
+            # No autoincrements are defined in the DB
             pass
 
     def run_setup_file(self, sql):
