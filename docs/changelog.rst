@@ -18,7 +18,7 @@ Added
 ~~~~~
 
 - Options to exclude schema or data from the dump. `#29`_
-- PyPy 2 & 3 and Python 2.7 support
+- PyPy 2 & 3 and Python 2.7 support.
 
 Changed
 ~~~~~~~
@@ -40,7 +40,7 @@ Added
 Fixed
 ~~~~~
 
-- Querying for relations by read-only user in Postgres. `#21`_
+- Querying for relations by read-only user in PostgreSQL. `#21`_
 - Constraint names clashing on different tables. `#22`_
 
 `0.3.1`_ - 2018-06-19
@@ -49,7 +49,7 @@ Fixed
 Fixed
 ~~~~~
 
-- Postgresql search path issue
+- PostgreSQL search path issue.
 
 `0.3.0`_ - 2018-03-13
 ---------------------
