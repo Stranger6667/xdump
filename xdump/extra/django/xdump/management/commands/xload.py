@@ -6,5 +6,6 @@ class Command(XDumpCommand):
     help = 'Loads an SQL dump.'
 
     def _handle(self, filename, backend, **options):
-        backend.recreate_database()
+        if not backend.is_dump_without_schema(filename):
+            backend.recreate_database()
         backend.load(filename)

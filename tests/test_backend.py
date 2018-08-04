@@ -3,7 +3,7 @@ import zipfile
 
 import pytest
 
-from .conftest import DATABASE, EMPLOYEES_SQL
+from .conftest import DATABASE, EMPLOYEES_SQL, IS_POSTGRES
 
 
 def test_logging(backend, capsys):
@@ -123,7 +123,7 @@ class TestHighLevelInterface:
         backend.load(archive_filename)
         assert db_helper.get_tables_count() == 3
         assert backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
-        if DATABASE == 'postgres':
+        if IS_POSTGRES:
             result = backend.run("SELECT currval('groups_id_seq')")
             assert result[0]['currval'] == 2
 
@@ -143,6 +143,23 @@ class TestHighLevelInterface:
         backend.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL}, dump_schema=False)
         archive = zipfile.ZipFile(archive_filename)
         assert archive.namelist() == ['dump/data/groups.csv', 'dump/data/employees.csv']
+
+    @pytest.mark.usefixtures('schema', 'data')
+    def test_skip_recreate(self, backend, archive_filename, db_helper, execute_file):
+        """If there is no schema in the dump - do not recreate DB."""
+        backend.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL}, dump_schema=False)
+
+        # Suppose you already have a clean DB
+        backend.recreate_database()
+        execute_file('sql/schema.sql', backend.get_cursor())
+
+        backend.load(archive_filename)
+        assert db_helper.get_tables_count() == 3
+        assert backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
+        if IS_POSTGRES:
+            # Sequences are not reset automatically - the user is responsible for doing this
+            result = backend.run("SELECT nextval('groups_id_seq')")
+            assert result[0]['nextval'] == 1
 
 
 @pytest.mark.usefixtures('schema')

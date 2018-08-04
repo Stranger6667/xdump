@@ -272,7 +272,7 @@ def read_sql_file(filename):
 @pytest.fixture
 def execute_file(cursor):
 
-    def executor(filename):
+    def executor(filename, cursor=cursor):
         sql = read_sql_file(filename)
         if IS_POSTGRES:
             cursor.execute(sql)
