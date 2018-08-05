@@ -134,7 +134,10 @@ class SQLiteBackend(BaseBackend):
                 fd = archive.open(name)
                 filename = os.path.basename(name).split('.')[0]
                 self.load_data_file(filename, fd)
-        self.run('COMMIT')
+        try:
+            self.run('COMMIT')
+        except sqlite3.OperationalError:
+            pass
 
     def load_data_file(self, table_name, fd):
         reader = DictReader(fd.read().decode().split('\n'), delimiter=',')

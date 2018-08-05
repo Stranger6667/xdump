@@ -1,4 +1,5 @@
 # coding: utf-8
+import sqlite3
 import zipfile
 
 import pytest
@@ -106,7 +107,10 @@ def test_truncate_load(backend, archive_filename, db_helper):
         dump_schema=False
     )
 
-    backend.run('COMMIT')
+    try:
+        backend.run('COMMIT')
+    except sqlite3.OperationalError:
+        pass
 
     call_command('xload', archive_filename, truncate=True)
 
