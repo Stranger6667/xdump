@@ -106,8 +106,7 @@ def test_truncate_load(backend, archive_filename, db_helper):
         dump_schema=False
     )
 
-    if IS_POSTGRES:
-        backend.run('COMMIT')
+    backend.run('COMMIT')
 
     call_command('xload', archive_filename, truncate=True)
 
