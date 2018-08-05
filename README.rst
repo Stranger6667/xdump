@@ -49,13 +49,15 @@ Load a dump on you local machine:
 .. code-block:: python
 
     >>> backend = PostgreSQLBackend(dbname='app_db', user='local', password='pass', host='127.0.0.1', port='5432')
+    # If you need a clear DB
+    >>> backend.recreate_database()  # or `backend.truncate()`
     >>> backend.load('/path/to/dump.zip')
 
 
 Dump is compressed by default. Compression level could be changed with passing ``compression`` argument to ``dump`` method.
 Valid options are ``zipfile.ZIP_STORED``, ``zipfile.ZIP_DEFLATED``, ``zipfile.ZIP_BZIP2`` and ``zipfile.ZIP_LZMA``.
 
-Verbosity of the output could be customized via `verbosity` (with values 0, 1 or 2) argument of a backend class.
+Verbosity of the output could be customized via ``verbosity`` (with values 0, 1 or 2) argument of a backend class.
 
 There are two options to control the content of the dump:
 
@@ -127,8 +129,13 @@ Possible options to both commands:
 
 - ``alias`` - allows you to choose database config from DATABASES, that is used during the execution;
 - ``backend`` - importable string, that leads to custom dump backend class.
-- ``dump_schema`` - controls if the schema should be included
-- ``dump_data`` - controls if the data should be included
+
+Options for ``xdump`` command:
+- ``dump_schema`` - controls if the schema should be included;
+- ``dump_data`` - controls if the data should be included.
+
+Options for ``xload`` command:
+- ``truncate`` - truncate data instead of DB re-creation.
 
 NOTE. If the dump has no schema inside, DB won't be re-created.
 

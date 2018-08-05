@@ -96,3 +96,23 @@ def test_skip_recreate(backend, execute_file, archive_filename, db_helper):
 
     call_command('xload', archive_filename)
     assert db_helper.get_tickets_count() == 0
+
+
+def test_truncate_load(backend, archive_filename, db_helper):
+    backend.dump(
+        archive_filename,
+        ['groups'],
+        {'employees': 'SELECT * FROM employees WHERE id = 1'},
+        dump_schema=False
+    )
+
+    if IS_POSTGRES:
+        backend.run('COMMIT')
+
+    call_command('xload', archive_filename, truncate=True)
+
+    assert db_helper.get_tables_count() == 3
+    assert backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
+    assert backend.run('SELECT id, first_name, last_name FROM employees') == [
+        {'id': 1, 'first_name': 'John', 'last_name': 'Doe'}
+    ]
