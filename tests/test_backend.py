@@ -161,6 +161,23 @@ class TestHighLevelInterface:
             result = backend.run("SELECT nextval('groups_id_seq')")
             assert result[0]['nextval'] == 1
 
+    @pytest.mark.usefixtures('schema', 'data')
+    def test_truncate_load(self, backend, archive_filename, db_helper):
+        backend.dump(
+            archive_filename,
+            ['groups'],
+            {'employees': 'SELECT * FROM employees WHERE id = 1'},
+            dump_schema=False
+        )
+
+        backend.truncate()
+        backend.load(archive_filename)
+        assert db_helper.get_tables_count() == 3
+        assert backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
+        assert backend.run('SELECT id, first_name, last_name FROM employees') == [
+            {'id': 1, 'first_name': 'John', 'last_name': 'Doe'}
+        ]
+
 
 @pytest.mark.usefixtures('schema')
 def test_write_schema(backend, db_helper, archive):

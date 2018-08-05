@@ -6,6 +6,12 @@ Changelog
 `Unreleased`_
 -------------
 
+Added
+~~~~~
+
+- Possibility to truncate data in the database instead of the DB re-creation.
+  ``truncate`` method in DB backends and ``--truncate`` option for Django integration. `#48`_
+
 Changed
 ~~~~~~~
 
@@ -98,6 +104,7 @@ Fixed
 .. _0.1.2: https://github.com/Stranger6667/xdump/compare/0.1.1...0.1.2
 .. _0.1.1: https://github.com/Stranger6667/xdump/compare/0.1.0...0.1.1
 
+.. _#48: https://github.com/Stranger6667/xdump/issues/48
 .. _#45: https://github.com/Stranger6667/xdump/issues/45
 .. _#44: https://github.com/Stranger6667/xdump/issues/44
 .. _#39: https://github.com/Stranger6667/xdump/issues/39

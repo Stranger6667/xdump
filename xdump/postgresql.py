@@ -11,6 +11,7 @@ from .base import BaseBackend
 from .utils import make_options
 
 
+TABLES_SQL = "SELECT relname FROM pg_class WHERE relkind = 'r' AND relnamespace = 'public'::regnamespace"
 SEQUENCES_SQL = "SELECT relname FROM pg_class WHERE relkind = 'S'"
 # The query below doesn't use `information_schema.table_constraints` and ``, but instead uses its modified versions
 # to mitigate permissions insufficiency on that views (they filter data by permissions of the current user)
@@ -197,6 +198,10 @@ class PostgreSQLBackend(BaseBackend):
 
     def create_database(self, dbname, owner):
         self.run('CREATE DATABASE {0} WITH OWNER {1}'.format(dbname, owner), using='maintenance')
+
+    def truncate(self):
+        tables = [row['relname'] for row in self.run(TABLES_SQL)]
+        self.run('TRUNCATE TABLE {0} RESTART IDENTITY CASCADE'.format(', '.join(tables)))
 
     def load_data_file(self, table_name, fd):
         self.copy_expert('COPY {0} FROM STDIN WITH CSV HEADER'.format(table_name), fd)
