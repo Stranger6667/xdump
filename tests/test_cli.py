@@ -6,18 +6,16 @@ from xdump.cli import postgres
 
 
 @pytest.fixture
-def xdump_pg(request, isolated_cli_runner, archive_filename):
-    postgresql = request.getfixturevalue('postgresql')
-    parameters = postgresql.get_dsn_parameters()
+def xdump_pg(isolated_cli_runner, dsn_parameters, archive_filename):
 
     def runner(*args):
         result = isolated_cli_runner.invoke(
             postgres,
             (
-                '-U', parameters['user'],
-                '-H', parameters['host'],
-                '-P', parameters['port'],
-                '-D', parameters['dbname'],
+                '-U', dsn_parameters['user'],
+                '-H', dsn_parameters['host'],
+                '-P', dsn_parameters['port'],
+                '-D', dsn_parameters['dbname'],
                 '-o', archive_filename,
             ) + args,
             catch_exceptions=False
