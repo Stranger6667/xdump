@@ -1,26 +1,29 @@
+import zipfile
+
 import pytest
 
 from xdump.cli import postgres
-from ._compat import patch
 
 
 @pytest.mark.postgres
 @pytest.mark.usefixtures('schema', 'data')
-def test_pg_connect(isolated_cli_runner):
-    from xdump.postgresql import PostgreSQLBackend
+def test_xdump_postgres(request, isolated_cli_runner, archive_filename, db_helper):
+    postgresql = request.getfixturevalue('postgresql')
+    parameters = postgresql.get_dsn_parameters()
 
-    with patch('xdump.postgresql.PostgreSQLBackend', wraps=PostgreSQLBackend) as backend:
-        result = isolated_cli_runner.invoke(
-            postgres,
-            (
-                '-U', 'test',
-                '-W', 'passw',
-                '-h', '127.0.0.1',
-                '-p', '5432',
-                '-d', 'tests'
-            ),
-            catch_exceptions=False
-        )
-        backend.assert_called_with(dbname='tests', host='127.0.0.1', port='5432', user='test', password='passw')
+    result = isolated_cli_runner.invoke(
+        postgres,
+        (
+            '-U', parameters['user'],
+            '-H', parameters['host'],
+            '-P', parameters['port'],
+            '-D', parameters['dbname'],
+            '-o', archive_filename,
+            '-f', 'groups'
+        ),
+        catch_exceptions=False
+    )
     assert not result.exception
-    assert result.output == ''
+    assert result.output == 'Dumping ...\nOutput file: {0}\nDone!\n'.format(archive_filename)
+    archive = zipfile.ZipFile(archive_filename)
+    db_helper.assert_groups(archive)
