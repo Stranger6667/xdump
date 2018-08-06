@@ -1,41 +1,26 @@
 import pytest
-import yaml
 
-from tests.conftest import EMPLOYEES_SQL
-from xdump.cli import xdump
-
-
-pytestmark = [pytest.mark.postgres]
+from xdump.cli import postgres
+from ._compat import patch
 
 
+@pytest.mark.postgres
 @pytest.mark.usefixtures('schema', 'data')
-def test_dump(request, isolated_cli_runner, tmpdir, archive_filename, db_helper):
-    postgresql = request.getfixturevalue('postgresql')
-    parameters = postgresql.get_dsn_parameters()
-    config_file = tmpdir.join('test.yml')
-    config_file.write(yaml.safe_dump({
-        'dump': {
-            'backend': 'xdump.postgresql.PostgreSQLBackend',
-            'dbname': parameters['dbname'],
-            'user': parameters['user'],
-            'password': None,
-            'host': parameters['host'],
-            'port': parameters['port'],
-            'output_file': archive_filename,
-            'compression': '',
-            'full_tables': ['groups'],
-            'partial_tables': {
-                'employees': EMPLOYEES_SQL
-            },
-        }
-    }))
-    result = isolated_cli_runner.invoke(
-        xdump,
-        (
-            '-c', config_file.strpath,
-        ),
-        catch_exceptions=False
-    )
+def test_pg_connect(isolated_cli_runner):
+    from xdump.postgresql import PostgreSQLBackend
+
+    with patch('xdump.postgresql.PostgreSQLBackend', wraps=PostgreSQLBackend) as backend:
+        result = isolated_cli_runner.invoke(
+            postgres,
+            (
+                '-U', 'test',
+                '-W', 'passw',
+                '-h', '127.0.0.1',
+                '-p', '5432',
+                '-d', 'tests'
+            ),
+            catch_exceptions=False
+        )
+        backend.assert_called_with(dbname='tests', host='127.0.0.1', port='5432', user='test', password='passw')
     assert not result.exception
     assert result.output == ''
-    db_helper.assert_dump(archive_filename)

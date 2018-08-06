@@ -12,7 +12,6 @@ with open('README.rst') as file:
 install_requires = [
     'attrs<19',
     'psycopg2<2.8',
-    'pyyaml==3.13',
     'click<7',
 ]
 if sys.version_info[0] == 2:
@@ -49,5 +48,9 @@ setup(
     install_requires=install_requires,
     extras_require={
         'django':  ['django>=1.11'],
-    }
+    },
+    entry_points='''
+        [console_scripts]
+        xdump=xdump.cli:xdump
+    '''
 )
