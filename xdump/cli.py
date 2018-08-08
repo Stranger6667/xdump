@@ -33,30 +33,40 @@ if sys.version_info[0] == 3:
     COMPRESSION_MAPPING.update(bzip2=zipfile.ZIP_BZIP2, lzma=zipfile.ZIP_LZMA)
 
 
+DEFAULT_PARAMETERS = [
+    xdump.command(),
+    click.option('-D', '--dbname', required=True, help='database to dump'),
+    click.option('-o', '--output', required=True, help='output file name'),
+    click.option('-f', '--full', help='table name to be fully dumped. Could be used multiple times', multiple=True),
+    click.option(
+        '-p', '--partial',
+        help='partial tables specification in a form "table_name:select SQL". Could be used multiple times',
+        callback=parse_partial,
+        multiple=True
+    ),
+    click.option(
+        '-c', '--compression',
+        help='dump compression level',
+        default='deflated',
+        type=click.Choice(list(COMPRESSION_MAPPING.keys()))
+    ),
+    click.option('--dump-schema', help='include / exclude the schema from the dump', default=True, type=bool),
+    click.option('--dump-data', help='include / exclude the data from the dump', default=True, type=bool),
+]
+
+
+def apply_decorators(decorators):
+
+    def wrapper(func):
+        for decorator in reversed(decorators):
+            func = decorator(func)
+        return func
+
+    return wrapper
+
+
 def command(func):
-    decorators = [
-        xdump.command(),
-        click.option('-D', '--dbname', required=True, help='database to dump'),
-        click.option('-o', '--output', required=True, help='output file name'),
-        click.option('-f', '--full', help='table name to be fully dumped. Could be used multiple times', multiple=True),
-        click.option(
-            '-p', '--partial',
-            help='partial tables specification in a form "table_name:select SQL". Could be used multiple times',
-            callback=parse_partial,
-            multiple=True
-        ),
-        click.option(
-            '-c', '--compression',
-            help='dump compression level',
-            default='deflated',
-            type=click.Choice(list(COMPRESSION_MAPPING.keys()))
-        ),
-        click.option('--dump-schema', help='include / exclude the schema from the dump', default=True, type=bool),
-        click.option('--dump-data', help='include / exclude the data from the dump', default=True, type=bool),
-    ]
-    for decorator in reversed(decorators):
-        func = decorator(func)
-    return func
+    return apply_decorators(DEFAULT_PARAMETERS)(func)
 
 
 def import_backend(path):
