@@ -1,3 +1,4 @@
+import sys
 import zipfile
 
 import click
@@ -27,9 +28,9 @@ def parse_partial(ctx, param, value):
 COMPRESSION_MAPPING = {
     'deflated': zipfile.ZIP_DEFLATED,
     'stored': zipfile.ZIP_STORED,
-    'bzip2': zipfile.ZIP_BZIP2,
-    'lzma': zipfile.ZIP_LZMA,
 }
+if sys.version_info[0] == 3:
+    COMPRESSION_MAPPING.update(bzip2=zipfile.ZIP_BZIP2, lzma=zipfile.ZIP_LZMA)
 
 
 def command(func):
@@ -48,7 +49,7 @@ def command(func):
             '-c', '--compression',
             help='dump compression level',
             default='deflated',
-            type=click.Choice(['deflated', 'stored', 'bzip2', 'lzma'])
+            type=click.Choice(list(COMPRESSION_MAPPING.keys()))
         ),
         click.option('--dump-schema', help='include / exclude the schema from the dump', default=True, type=bool),
         click.option('--dump-data', help='include / exclude the data from the dump', default=True, type=bool),
