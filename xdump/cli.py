@@ -49,7 +49,9 @@ COMPRESSION_MAPPING = {
     default='deflated',
     type=click.Choice(['deflated', 'stored', 'bzip2', 'lzma'])
 )
-def postgres(user, password, host, port, dbname, output, full, partial, compression):
+@click.option('--dump-schema', help='include / exclude the schema from the dump', default=True, type=bool)
+@click.option('--dump-data', help='include / exclude the data from the dump', default=True, type=bool)
+def postgres(user, password, host, port, dbname, output, full, partial, compression, dump_schema, dump_data):
     if partial:
         partial = parse_partial(*partial)
     compression = COMPRESSION_MAPPING[compression]
@@ -60,5 +62,8 @@ def postgres(user, password, host, port, dbname, output, full, partial, compress
     from .postgresql import PostgreSQLBackend
 
     backend = PostgreSQLBackend(dbname=dbname, host=host, port=port, user=user, password=password)
-    backend.dump(output, full_tables=full, partial_tables=partial, compression=compression)
+    backend.dump(
+        output, full_tables=full, partial_tables=partial, compression=compression, dump_schema=dump_schema,
+        dump_data=dump_data
+    )
     click.echo('Done!')
