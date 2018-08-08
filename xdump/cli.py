@@ -1,3 +1,5 @@
+import zipfile
+
 import click
 
 
@@ -21,6 +23,13 @@ def parse_partial(*partials):
     return dict(parse_value(partial) for partial in partials)
 
 
+COMPRESSION_MAPPING = {
+    'deflated': zipfile.ZIP_DEFLATED,
+    'stored': zipfile.ZIP_STORED,
+    'bzip2': zipfile.ZIP_BZIP2,
+    'lzma': zipfile.ZIP_LZMA,
+}
+
 @xdump.command()
 @click.option('-U', '--user', required=True, help='connect as specified database user')
 @click.option('-W', '--password', help='password for the DB connection')
@@ -34,9 +43,16 @@ def parse_partial(*partials):
     help='partial tables specification in a form "table_name:select SQL". Could be used multiple times',
     multiple=True
 )
-def postgres(user, password, host, port, dbname, output, full, partial):
+@click.option(
+    '-c', '--compression',
+    help='dump compression level',
+    default='deflated',
+    type=click.Choice(['deflated', 'stored', 'bzip2', 'lzma'])
+)
+def postgres(user, password, host, port, dbname, output, full, partial, compression):
     if partial:
         partial = parse_partial(*partial)
+    compression = COMPRESSION_MAPPING[compression]
 
     click.echo('Dumping ...')
     click.echo('Output file: {0}'.format(output))
@@ -44,5 +60,5 @@ def postgres(user, password, host, port, dbname, output, full, partial):
     from .postgresql import PostgreSQLBackend
 
     backend = PostgreSQLBackend(dbname=dbname, host=host, port=port, user=user, password=password)
-    backend.dump(output, full_tables=full, partial_tables=partial)
+    backend.dump(output, full_tables=full, partial_tables=partial, compression=compression)
     click.echo('Done!')
