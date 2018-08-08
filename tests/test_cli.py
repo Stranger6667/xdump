@@ -98,5 +98,6 @@ def test_xdump_partial_tables_invalid(xdump):
     result = xdump('-p', 'shit')
     assert result.exception
     assert result.output.endswith(
-        'Invalid value: partial table specification should be in the following format: "table:select SQL"\n'
+        'Invalid value for "-p" / "--partial": partial table specification should be in '
+        'the following format: "table:select SQL"\n'
     )

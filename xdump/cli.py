@@ -9,7 +9,7 @@ def xdump():
     pass
 
 
-def parse_partial(*partials):
+def parse_partial(ctx, param, value):
 
     def parse_value(value):
         try:
@@ -18,9 +18,10 @@ def parse_partial(*partials):
         except ValueError:
             raise click.exceptions.BadParameter(
                 'partial table specification should be in the following format: "table:select SQL"',
+                param=param,
             )
 
-    return dict(parse_value(partial) for partial in partials)
+    return dict(parse_value(partial) for partial in value)
 
 
 COMPRESSION_MAPPING = {
@@ -40,6 +41,7 @@ def command(func):
         click.option(
             '-p', '--partial',
             help='partial tables specification in a form "table_name:select SQL". Could be used multiple times',
+            callback=parse_partial,
             multiple=True
         ),
         click.option(
@@ -64,8 +66,6 @@ def import_backend(path):
 
 def base_dump(backend_path, user, password, host, port, dbname, output, full, partial, compression, dump_schema,
               dump_data):
-    if partial:
-        partial = parse_partial(*partial)
     compression = COMPRESSION_MAPPING[compression]
 
     click.echo('Dumping ...')
