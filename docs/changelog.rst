@@ -11,6 +11,7 @@ Added
 
 - Possibility to truncate data in the database instead of the DB re-creation.
   ``truncate`` method in DB backends and ``--truncate`` option for Django integration. `#48`_
+- Command Line Interface. `#6`_
 
 Changed
 ~~~~~~~
@@ -117,3 +118,4 @@ Fixed
 .. _#13: https://github.com/Stranger6667/xdump/issues/13
 .. _#8: https://github.com/Stranger6667/xdump/issues/8
 .. _#7: https://github.com/Stranger6667/xdump/issues/7
+.. _#6: https://github.com/Stranger6667/xdump/issues/6

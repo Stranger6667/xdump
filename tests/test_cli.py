@@ -3,22 +3,38 @@ import zipfile
 import pytest
 
 from xdump import __version__
-from xdump.cli import postgres, xdump
+from xdump.cli import postgres, sqlite, xdump as group
+
+from .conftest import DATABASE
 
 
 @pytest.fixture
-def xdump_pg(isolated_cli_runner, dsn_parameters, archive_filename):
+def xdump(request, isolated_cli_runner, archive_filename):
 
     def runner(*args):
-        return isolated_cli_runner.invoke(
-            postgres,
-            (
+        command = {
+            'sqlite': sqlite,
+            'postgres': postgres
+        }[DATABASE]
+        default_args = ()
+        if command is sqlite:
+            dbname = request.getfixturevalue('dbname')
+            default_args = (
+                '-D', dbname,
+                '-o', archive_filename,
+            )
+        elif command is postgres:
+            dsn_parameters = request.getfixturevalue('dsn_parameters')
+            default_args = (
                 '-U', dsn_parameters['user'],
                 '-H', dsn_parameters['host'],
                 '-P', dsn_parameters['port'],
                 '-D', dsn_parameters['dbname'],
                 '-o', archive_filename,
-            ) + args,
+            )
+        return isolated_cli_runner.invoke(
+            command,
+            default_args + args,
             catch_exceptions=False
         )
 
@@ -27,25 +43,23 @@ def xdump_pg(isolated_cli_runner, dsn_parameters, archive_filename):
 
 def test_xdump_run(isolated_cli_runner):
     """Smoke test for a click group."""
-    result = isolated_cli_runner.invoke(xdump, ('--version', ))
+    result = isolated_cli_runner.invoke(group, ('--version', ))
     assert not result.exception
     assert result.output == 'xdump, version {0}\n'.format(__version__)
 
 
-@pytest.mark.postgres
 @pytest.mark.usefixtures('schema', 'data')
-def test_xdump_postgres(xdump_pg, archive_filename, db_helper):
-    result = xdump_pg('-f', 'groups')
+def test_xdump(xdump, archive_filename, db_helper):
+    result = xdump('-f', 'groups')
     assert not result.exception
     assert result.output == 'Dumping ...\nOutput file: {0}\nDone!\n'.format(archive_filename)
     archive = zipfile.ZipFile(archive_filename)
     db_helper.assert_groups(archive)
 
 
-@pytest.mark.postgres
 @pytest.mark.usefixtures('schema', 'data')
-def test_xdump_postgres_multiple_full_tables(xdump_pg, archive_filename, db_helper):
-    result = xdump_pg('-f', 'groups', '-f' 'tickets')
+def test_xdump_multiple_full_tables(xdump, archive_filename, db_helper):
+    result = xdump('-f', 'groups', '-f' 'tickets')
     assert not result.exception
     archive = zipfile.ZipFile(archive_filename)
     db_helper.assert_groups(archive)
@@ -63,10 +77,9 @@ def test_xdump_postgres_multiple_full_tables(xdump_pg, archive_filename, db_help
     )
 
 
-@pytest.mark.postgres
 @pytest.mark.usefixtures('schema', 'data')
-def test_xdump_postgres_partial_tables(xdump_pg, archive_filename, db_helper):
-    result = xdump_pg('-p', 'employees:SELECT * FROM employees WHERE id = 1')
+def test_xdump_partial_tables(xdump, archive_filename, db_helper):
+    result = xdump('-p', 'employees:SELECT * FROM employees WHERE id = 1')
     assert not result.exception
     archive = zipfile.ZipFile(archive_filename)
     db_helper.assert_content(archive, 'groups', {b'id,name', b'1,Admin'})
@@ -80,11 +93,10 @@ def test_xdump_postgres_partial_tables(xdump_pg, archive_filename, db_helper):
     )
 
 
-@pytest.mark.postgres
 @pytest.mark.usefixtures('schema', 'data')
-def test_xdump_postgres_partial_tables_invalid(xdump_pg):
-    result = xdump_pg('-p', 'shit')
+def test_xdump_partial_tables_invalid(xdump):
+    result = xdump('-p', 'shit')
     assert result.exception
-    assert result.output == 'Usage: postgres [OPTIONS]\n\nError: ' \
-                            'Invalid value: partial table specification should be in the ' \
-                            'following format: "table:select SQL"\n'
+    assert result.output.endswith(
+        'Invalid value: partial table specification should be in the following format: "table:select SQL"\n'
+    )
