@@ -1,47 +1,9 @@
-import sqlite3
 import zipfile
 
 import pytest
 
 from xdump import __version__
-from xdump.cli.dump import dump as group, postgres, sqlite
-
-from ..conftest import DATABASE
-
-
-@pytest.fixture
-def xdump(request, isolated_cli_runner, archive_filename):
-
-    def runner(*args):
-        command = {
-            'sqlite': sqlite,
-            'postgres': postgres
-        }[DATABASE]
-        default_args = ()
-        if command is sqlite:
-            if sqlite3.sqlite_version_info < (3, 8, 3):
-                pytest.skip('Unsupported SQLite version')
-            dbname = request.getfixturevalue('dbname')
-            default_args = (
-                '-D', dbname,
-                '-o', archive_filename,
-            )
-        elif command is postgres:
-            dsn_parameters = request.getfixturevalue('dsn_parameters')
-            default_args = (
-                '-U', dsn_parameters['user'],
-                '-H', dsn_parameters['host'],
-                '-P', dsn_parameters['port'],
-                '-D', dsn_parameters['dbname'],
-                '-o', archive_filename,
-            )
-        return isolated_cli_runner.invoke(
-            command,
-            default_args + args,
-            catch_exceptions=False
-        )
-
-    return runner
+from xdump.cli.dump import dump as group
 
 
 def test_xdump_run(isolated_cli_runner):
@@ -52,8 +14,8 @@ def test_xdump_run(isolated_cli_runner):
 
 
 @pytest.mark.usefixtures('schema', 'data')
-def test_single_full_table(xdump, archive_filename, db_helper):
-    result = xdump('-f', 'groups')
+def test_single_full_table(cli, archive_filename, db_helper):
+    result = cli.dump('-f', 'groups')
     assert not result.exception
     assert result.output == 'Dumping ...\nOutput file: {0}\nDone!\n'.format(archive_filename)
     archive = zipfile.ZipFile(archive_filename)
@@ -61,8 +23,8 @@ def test_single_full_table(xdump, archive_filename, db_helper):
 
 
 @pytest.mark.usefixtures('schema', 'data')
-def test_multiple_full_tables(xdump, archive_filename, db_helper):
-    result = xdump('-f', 'groups', '-f' 'tickets')
+def test_multiple_full_tables(cli, archive_filename, db_helper):
+    result = cli.dump('-f', 'groups', '-f' 'tickets')
     assert not result.exception
     archive = zipfile.ZipFile(archive_filename)
     db_helper.assert_groups(archive)
@@ -81,8 +43,8 @@ def test_multiple_full_tables(xdump, archive_filename, db_helper):
 
 
 @pytest.mark.usefixtures('schema', 'data')
-def test_partial_tables(xdump, archive_filename, db_helper):
-    result = xdump('-p', 'employees:SELECT * FROM employees WHERE id = 1')
+def test_partial_tables(cli, archive_filename, db_helper):
+    result = cli.dump('-p', 'employees:SELECT * FROM employees WHERE id = 1')
     assert not result.exception
     archive = zipfile.ZipFile(archive_filename)
     db_helper.assert_content(archive, 'groups', {b'id,name', b'1,Admin'})
@@ -97,8 +59,8 @@ def test_partial_tables(xdump, archive_filename, db_helper):
 
 
 @pytest.mark.usefixtures('schema', 'data')
-def test_partial_tables_invalid(xdump):
-    result = xdump('-p', 'shit')
+def test_partial_tables_invalid(cli):
+    result = cli.dump('-p', 'shit')
     assert result.exception
     assert result.output.endswith(
         'Invalid value for "-p" / "--partial": partial table specification should be in '
@@ -107,8 +69,8 @@ def test_partial_tables_invalid(xdump):
 
 
 @pytest.mark.usefixtures('schema', 'data')
-def test_no_schema(xdump, archive_filename):
-    result = xdump('-f', 'groups', '--no-schema')
+def test_no_schema(cli, archive_filename):
+    result = cli.dump('-f', 'groups', '--no-schema')
     assert not result.exception
     archive = zipfile.ZipFile(archive_filename)
     assert archive.namelist() == ['dump/data/groups.csv']
