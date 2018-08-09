@@ -13,6 +13,7 @@ def dump():
 
 
 def parse_partial(ctx, param, value):
+    """Parse values for `partial` option. They should be in the format `table:select SQL`."""
 
     def parse_value(value):
         try:
@@ -32,6 +33,7 @@ COMPRESSION_MAPPING = {
     'stored': zipfile.ZIP_STORED,
 }
 if sys.version_info[0] == 3:
+    # BZIP2 & LZMA are not available on Python 2
     COMPRESSION_MAPPING.update(bzip2=zipfile.ZIP_BZIP2, lzma=zipfile.ZIP_LZMA)
 
 
@@ -64,6 +66,7 @@ def command(func):
 
 def base_dump(backend_path, user, password, host, port, dbname, output, full, partial, compression, schema, data,
               verbosity):
+    """Common implementation of dump command. Writes a few logs, imports a backend and makes a dump."""
     compression = COMPRESSION_MAPPING[compression]
 
     click.echo('Dumping ...')
