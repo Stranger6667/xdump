@@ -2,16 +2,6 @@ import zipfile
 
 import pytest
 
-from xdump import __version__
-from xdump.cli.dump import dump as group
-
-
-def test_xdump_run(isolated_cli_runner):
-    """Smoke test for a click group."""
-    result = isolated_cli_runner.invoke(group, ('--version', ))
-    assert not result.exception
-    assert result.output == 'xdump, version {0}\n'.format(__version__)
-
 
 @pytest.mark.usefixtures('schema', 'data')
 def test_single_full_table(cli, archive_filename, db_helper):

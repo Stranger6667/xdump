@@ -52,5 +52,6 @@ setup(
     entry_points='''
         [console_scripts]
         xdump=xdump.cli.dump:dump
+        xload=xdump.cli.load:load
     '''
 )
