@@ -1,12 +1,9 @@
-import pytest
-
 from xdump.base import BaseBackend
 from xdump.cli.utils import apply_decorators, import_backend
 
 
-@pytest.mark.parametrize('path', ('xdump.postgresql.PostgreSQLBackend', 'xdump.sqlite.SQLiteBackend'))
-def test_import_backend(path):
-    backend_class = import_backend(path)
+def test_import_backend():
+    backend_class = import_backend('xdump.sqlite.SQLiteBackend')
     assert issubclass(backend_class, BaseBackend)
 
 
