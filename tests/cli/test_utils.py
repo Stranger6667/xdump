@@ -1,16 +1,13 @@
 import pytest
 
+from xdump.base import BaseBackend
 from xdump.cli.utils import apply_decorators, import_backend
-from xdump.postgresql import PostgreSQLBackend
-from xdump.sqlite import SQLiteBackend
 
 
-@pytest.mark.parametrize('path, expected', (
-    ('xdump.postgresql.PostgreSQLBackend', PostgreSQLBackend),
-    ('xdump.sqlite.SQLiteBackend', SQLiteBackend),
-))
-def test_import_backend(path, expected):
-    assert import_backend(path) is expected
+@pytest.mark.parametrize('path', ('xdump.postgresql.PostgreSQLBackend', 'xdump.sqlite.SQLiteBackend'))
+def test_import_backend(path):
+    backend_class = import_backend(path)
+    assert issubclass(backend_class, BaseBackend)
 
 
 def test_apply_decorators():
