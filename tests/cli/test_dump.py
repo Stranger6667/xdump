@@ -49,7 +49,7 @@ def test_xdump_run(isolated_cli_runner):
 
 
 @pytest.mark.usefixtures('schema', 'data')
-def test_xdump(xdump, archive_filename, db_helper):
+def test_single_full_table(xdump, archive_filename, db_helper):
     result = xdump('-f', 'groups')
     assert not result.exception
     assert result.output == 'Dumping ...\nOutput file: {0}\nDone!\n'.format(archive_filename)
@@ -58,7 +58,7 @@ def test_xdump(xdump, archive_filename, db_helper):
 
 
 @pytest.mark.usefixtures('schema', 'data')
-def test_xdump_multiple_full_tables(xdump, archive_filename, db_helper):
+def test_multiple_full_tables(xdump, archive_filename, db_helper):
     result = xdump('-f', 'groups', '-f' 'tickets')
     assert not result.exception
     archive = zipfile.ZipFile(archive_filename)
@@ -78,7 +78,7 @@ def test_xdump_multiple_full_tables(xdump, archive_filename, db_helper):
 
 
 @pytest.mark.usefixtures('schema', 'data')
-def test_xdump_partial_tables(xdump, archive_filename, db_helper):
+def test_partial_tables(xdump, archive_filename, db_helper):
     result = xdump('-p', 'employees:SELECT * FROM employees WHERE id = 1')
     assert not result.exception
     archive = zipfile.ZipFile(archive_filename)
@@ -94,10 +94,18 @@ def test_xdump_partial_tables(xdump, archive_filename, db_helper):
 
 
 @pytest.mark.usefixtures('schema', 'data')
-def test_xdump_partial_tables_invalid(xdump):
+def test_partial_tables_invalid(xdump):
     result = xdump('-p', 'shit')
     assert result.exception
     assert result.output.endswith(
         'Invalid value for "-p" / "--partial": partial table specification should be in '
         'the following format: "table:select SQL"\n'
     )
+
+
+@pytest.mark.usefixtures('schema', 'data')
+def test_no_schema(xdump, archive_filename):
+    result = xdump('-f', 'groups', '--no-schema')
+    assert not result.exception
+    archive = zipfile.ZipFile(archive_filename)
+    assert archive.namelist() == ['dump/data/groups.csv']

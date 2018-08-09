@@ -52,8 +52,8 @@ DEFAULT_PARAMETERS = [
         default='deflated',
         type=click.Choice(list(COMPRESSION_MAPPING.keys()))
     ),
-    click.option('--dump-schema', help='include / exclude the schema from the dump', default=True, type=bool),
-    click.option('--dump-data', help='include / exclude the data from the dump', default=True, type=bool),
+    click.option('--schema/--no-schema', help='include / exclude the schema from the dump', default=True),
+    click.option('--data/--no-data', help='include / exclude the data from the dump', default=True),
     click.option('-v', '--verbosity', help='verbosity level', default=0, count=True, type=click.IntRange(0, 2)),
 ]
 
@@ -62,8 +62,8 @@ def command(func):
     return apply_decorators(DEFAULT_PARAMETERS)(func)
 
 
-def base_dump(backend_path, user, password, host, port, dbname, output, full, partial, compression, dump_schema,
-              dump_data, verbosity):
+def base_dump(backend_path, user, password, host, port, dbname, output, full, partial, compression, schema, data,
+              verbosity):
     compression = COMPRESSION_MAPPING[compression]
 
     click.echo('Dumping ...')
@@ -73,8 +73,8 @@ def base_dump(backend_path, user, password, host, port, dbname, output, full, pa
 
     backend = backend_class(dbname=dbname, host=host, port=port, user=user, password=password, verbosity=verbosity)
     backend.dump(
-        output, full_tables=full, partial_tables=partial, compression=compression, dump_schema=dump_schema,
-        dump_data=dump_data
+        output, full_tables=full, partial_tables=partial, compression=compression, dump_schema=schema,
+        dump_data=data
     )
     click.echo('Done!')
 
@@ -84,12 +84,12 @@ def base_dump(backend_path, user, password, host, port, dbname, output, full, pa
 @click.option('-W', '--password', help='password for the DB connection')
 @click.option('-H', '--host', default='127.0.0.1', help='database server host or socket directory')
 @click.option('-P', '--port', default='5432', help='database server port number')
-def postgres(user, password, host, port, dbname, output, full, partial, compression, dump_schema, dump_data, verbosity):
+def postgres(user, password, host, port, dbname, output, full, partial, compression, schema, data, verbosity):
     base_dump('xdump.postgresql.PostgreSQLBackend', user, password, host, port, dbname, output, full, partial,
-              compression, dump_schema, dump_data, verbosity)
+              compression, schema, data, verbosity)
 
 
 @command
-def sqlite(dbname, output, full, partial, compression, dump_schema, dump_data, verbosity):
+def sqlite(dbname, output, full, partial, compression, schema, data, verbosity):
     base_dump('xdump.sqlite.SQLiteBackend', None, None, None, None, dbname, output, full, partial, compression,
-              dump_schema, dump_data, verbosity)
+              schema, data, verbosity)
