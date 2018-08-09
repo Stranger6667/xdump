@@ -51,6 +51,6 @@ setup(
     },
     entry_points='''
         [console_scripts]
-        xdump=xdump.cli:xdump
+        xdump=xdump.cli.dump:dump
     '''
 )

@@ -3,7 +3,7 @@ import zipfile
 import pytest
 
 from xdump import __version__
-from xdump.cli import postgres, sqlite, xdump as group
+from xdump.cli.dump import postgres, sqlite, dump as group
 
 from .conftest import DATABASE
 
