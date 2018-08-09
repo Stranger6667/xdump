@@ -26,7 +26,7 @@ def cli(request, archive_filename, isolated_cli_runner):
     class CLI(object):
 
         def call(self, command, *args):
-            default_args = ('-o', archive_filename)
+            default_args = ()
             if IS_SQLITE:
                 dbname = request.getfixturevalue('dbname')
                 default_args += (
@@ -47,9 +47,9 @@ def cli(request, archive_filename, isolated_cli_runner):
             )
 
         def dump(self, *args):
-            return self.call(commands['dump'], *args)
+            return self.call(commands['dump'], '-o', archive_filename, *args)
 
         def load(self, *args):
-            return self.call(commands['load'], *args)
+            return self.call(commands['load'], '-i', archive_filename, *args)
 
     return CLI()
