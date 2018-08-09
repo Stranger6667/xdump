@@ -5,7 +5,7 @@ import pytest
 from xdump import __version__
 from xdump.cli.dump import postgres, sqlite, dump as group
 
-from .conftest import DATABASE
+from ..conftest import DATABASE
 
 
 @pytest.fixture
