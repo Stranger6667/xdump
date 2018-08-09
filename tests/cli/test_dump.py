@@ -1,3 +1,4 @@
+import sqlite3
 import zipfile
 
 import pytest
@@ -18,6 +19,8 @@ def xdump(request, isolated_cli_runner, archive_filename):
         }[DATABASE]
         default_args = ()
         if command is sqlite:
+            if sqlite3.sqlite_version_info < (3, 8, 3):
+                pytest.skip('Unsupported SQLite version')
             dbname = request.getfixturevalue('dbname')
             default_args = (
                 '-D', dbname,
