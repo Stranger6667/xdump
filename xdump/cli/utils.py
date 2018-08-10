@@ -16,3 +16,9 @@ def import_backend(path):
     module_name, class_name = path.rsplit('.', 1)
     module = __import__(module_name, fromlist=[class_name])
     return getattr(module, class_name)
+
+
+def init_backend(backend_path, **kwargs):
+    """Initialize a DB backend."""
+    backend_class = import_backend(backend_path)
+    return backend_class(**kwargs)

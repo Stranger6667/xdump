@@ -3,7 +3,8 @@ import zipfile
 
 import click
 
-from .utils import apply_decorators, import_backend
+from .base import COMMON_DECORATORS, PG_DECORATORS
+from .utils import apply_decorators, init_backend
 
 
 @click.group(name='xdump')
@@ -39,8 +40,6 @@ if sys.version_info[0] == 3:
 
 DEFAULT_PARAMETERS = [
     dump.command(),
-    click.option('-D', '--dbname', required=True, help='database to dump'),
-    click.option('-v', '--verbosity', help='verbosity level', default=0, count=True, type=click.IntRange(0, 2)),
     click.option('-o', '--output', required=True, help='output file name'),
     click.option('-f', '--full', help='table name to be fully dumped. Could be used multiple times', multiple=True),
     click.option(
@@ -57,11 +56,7 @@ DEFAULT_PARAMETERS = [
     ),
     click.option('--schema/--no-schema', help='include / exclude the schema from the dump', default=True),
     click.option('--data/--no-data', help='include / exclude the data from the dump', default=True),
-]
-
-
-def command(func):
-    return apply_decorators(DEFAULT_PARAMETERS)(func)
+] + COMMON_DECORATORS
 
 
 def base_dump(backend_path, user, password, host, port, dbname, verbosity, output, full, partial, compression, schema,
@@ -72,9 +67,9 @@ def base_dump(backend_path, user, password, host, port, dbname, verbosity, outpu
     click.echo('Dumping ...')
     click.echo('Output file: {0}'.format(output))
 
-    backend_class = import_backend(backend_path)
-
-    backend = backend_class(dbname=dbname, host=host, port=port, user=user, password=password, verbosity=verbosity)
+    backend = init_backend(
+        backend_path, dbname=dbname, host=host, port=port, user=user, password=password, verbosity=verbosity
+    )
     backend.dump(
         output, full_tables=full, partial_tables=partial, compression=compression, dump_schema=schema,
         dump_data=data
@@ -82,17 +77,13 @@ def base_dump(backend_path, user, password, host, port, dbname, verbosity, outpu
     click.echo('Done!')
 
 
-@command
-@click.option('-U', '--user', required=True, help='connect as specified database user')
-@click.option('-W', '--password', help='password for the DB connection')
-@click.option('-H', '--host', default='127.0.0.1', help='database server host or socket directory')
-@click.option('-P', '--port', default='5432', help='database server port number')
+@apply_decorators(DEFAULT_PARAMETERS + PG_DECORATORS)
 def postgres(user, password, host, port, dbname, verbosity, output, full, partial, compression, schema, data):
     base_dump('xdump.postgresql.PostgreSQLBackend', user, password, host, port, dbname, verbosity, output, full,
               partial, compression, schema, data)
 
 
-@command
+@apply_decorators(DEFAULT_PARAMETERS)
 def sqlite(dbname, verbosity, output, full, partial, compression, schema, data):
     base_dump('xdump.sqlite.SQLiteBackend', None, None, None, None, dbname, verbosity, output, full, partial,
               compression, schema, data)

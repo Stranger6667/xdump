@@ -29,12 +29,12 @@ def cli(request, archive_filename, isolated_cli_runner):
             default_args = ()
             if IS_SQLITE:
                 dbname = request.getfixturevalue('dbname')
-                default_args += (
+                default_args = (
                     '-D', dbname,
                 )
             elif IS_POSTGRES:
                 dsn_parameters = request.getfixturevalue('dsn_parameters')
-                default_args += (
+                default_args = (
                     '-U', dsn_parameters['user'],
                     '-H', dsn_parameters['host'],
                     '-P', dsn_parameters['port'],
