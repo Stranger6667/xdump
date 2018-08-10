@@ -58,6 +58,14 @@ def dbname(tmpdir):
     return str(tmpdir.join('test.db'))
 
 
+@pytest.fixture
+def dsn_parameters(request):
+    postgresql = request.getfixturevalue('postgresql')
+    if platform.python_implementation() == 'PyPy':
+        return dict(item.split('=') for item in postgresql.dsn.split())
+    return postgresql.get_dsn_parameters()
+
+
 @attr.s(cmp=False)
 class BackendWrapper(object):
     """
@@ -216,11 +224,7 @@ def backend(request):
     if IS_POSTGRES:
         from xdump.postgresql import PostgreSQLBackend
 
-        postgresql = request.getfixturevalue('postgresql')
-        if platform.python_implementation() == 'PyPy':
-            parameters = dict(item.split('=') for item in postgresql.dsn.split())
-        else:
-            parameters = postgresql.get_dsn_parameters()
+        parameters = request.getfixturevalue('dsn_parameters')
         return PostgreSQLBackend(
             dbname=parameters['dbname'],
             user=parameters['user'],

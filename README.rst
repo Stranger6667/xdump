@@ -73,6 +73,59 @@ For example, if the ``employees`` table has foreign keys ``group_id`` (to ``grou
 (to ``employees`` table) the resulting dump will have all objects related to selected employees
 (as well as for objects related to related objects, recursively).
 
+Command Line Interface
+======================
+
+``xload`` provides an ability to create a dump.
+
+Signature:
+
+.. code-block:: bash
+
+    xdump [postgres|sqlite] [OPTIONS]
+
+Common options::
+
+  -o, --output TEXT               output file name  [required]
+  -f, --full TEXT                 table name to be fully dumped. Could be used
+                                  multiple times
+  -p, --partial TEXT              partial tables specification in a form
+                                  "table_name:select SQL". Could be used
+                                  multiple times
+  -c, --compression [deflated|stored|bzip2|lzma]
+                                  dump compression level
+  --schema / --no-schema          include / exclude the schema from the dump
+  --data / --no-data              include / exclude the data from the dump
+  -D, --dbname TEXT               database to work with  [required]
+  -v, --verbosity                 verbosity level
+
+PostgreSQL-specific options::
+
+  -U, --user TEXT                 connect as specified database user
+                                  [required]
+  -W, --password TEXT             password for the DB connection
+  -H, --host TEXT                 database server host or socket directory
+  -P, --port TEXT                 database server port number
+
+``xload`` loads a dump into a database.
+
+Signature:
+
+
+.. code-block:: bash
+
+    xload [postgres|sqlite] [OPTIONS]
+
+Common options::
+
+  -i, --input TEXT                input file name  [required]
+  -m, --cleanup-method [recreate|truncate]
+                                  method of DB cleaning up
+  -D, --dbname TEXT               database to work with  [required]
+  -v, --verbosity                 verbosity level
+
+PostgreSQL-specific options are the same as for ``xdump``.
+
 RDBMS support
 =============
 

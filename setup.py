@@ -9,7 +9,11 @@ import xdump
 with open('README.rst') as file:
     long_description = file.read()
 
-install_requires = ['attrs', 'psycopg2']
+install_requires = [
+    'attrs<19',
+    'psycopg2<2.8',
+    'click<7',
+]
 if sys.version_info[0] == 2:
     install_requires.append('repoze.lru==0.7')
 
@@ -44,5 +48,10 @@ setup(
     install_requires=install_requires,
     extras_require={
         'django':  ['django>=1.11'],
-    }
+    },
+    entry_points='''
+        [console_scripts]
+        xdump=xdump.cli.dump:dump
+        xload=xdump.cli.load:load
+    '''
 )
