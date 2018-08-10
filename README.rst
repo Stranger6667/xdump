@@ -17,7 +17,7 @@ XDump
     :target: https://pypi.python.org/pypi/xdump
     :alt: Latest PyPI version
 
-XDump is an utility to make partial consistent dump and load it into the database.
+XDump is a utility to make a consistent partial dump and load it into the database.
 
 The idea is to provide an ability to specify what to include in the dump via SQL queries.
 
@@ -31,20 +31,20 @@ XDump can be obtained with ``pip``::
 Usage example
 =============
 
-Making a dump (on production replica for example):
+Make a dump (on production replica for example):
 
 .. code-block:: python
 
     >>> from xdump.postgresql import PostgreSQLBackend
-    >>> 
+    >>>
     >>> backend = PostgreSQLBackend(dbname='app_db', user='prod', password='pass', host='127.0.0.1', port='5432')
     >>> backend.dump(
-        '/path/to/dump.zip', 
-        full_tables=['groups'], 
+        '/path/to/dump.zip',
+        full_tables=['groups'],
         partial_tables={'employees': 'SELECT * FROM employees ORDER BY id DESC LIMIT 2'}
     )
 
-Load a dump on you local machine:
+Load a dump on your local machine:
 
 .. code-block:: python
 
@@ -57,7 +57,7 @@ Load a dump on you local machine:
 Dump is compressed by default. Compression level could be changed with passing ``compression`` argument to ``dump`` method.
 Valid options are ``zipfile.ZIP_STORED``, ``zipfile.ZIP_DEFLATED``, ``zipfile.ZIP_BZIP2`` and ``zipfile.ZIP_LZMA``.
 
-Verbosity of the output could be customized via ``verbosity`` (with values 0, 1 or 2) argument of a backend class.
+The verbosity of the output could be customized via ``verbosity`` (with values 0, 1 or 2) argument of a backend class.
 
 There are two options to control the content of the dump:
 
@@ -146,9 +146,9 @@ Add ``xdump.extra.django`` to your ``INSTALLED_APPS`` settings:
        'xdump.extra.django',
     ]
 
-Add ``XDUMP`` to your project settings file. It should contain minimum 2 entries:
+Add ``XDUMP`` to your project settings file. It should contain minimum two entries:
 
-- FULL_TABLES - a list of tables, that should be fully dumped.
+- FULL_TABLES - a list of tables that should be fully dumped.
 - PARTIAL_TABLES - a dictionary with ``table_name``: ``select SQL``
 
 .. code-block:: python
