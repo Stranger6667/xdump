@@ -1,3 +1,5 @@
+import sqlite3
+
 import pytest
 
 from ..conftest import EMPLOYEES_SQL, IS_POSTGRES
@@ -22,8 +24,10 @@ def test_load(backend, cli, archive_filename, db_helper):
 @pytest.mark.usefixtures('schema', 'data')
 def test_cleanup_methods(cli, archive_filename, backend, cleanup_method, dump_kwargs):
     backend.dump(archive_filename, ['groups'], {'employees': EMPLOYEES_SQL}, **dump_kwargs)
-    if IS_POSTGRES:
+    try:
         backend.run('COMMIT')
+    except sqlite3.OperationalError:
+        pass
     result = cli.load('-i', archive_filename, '-m', cleanup_method)
     assert not result.exception
     assert backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
