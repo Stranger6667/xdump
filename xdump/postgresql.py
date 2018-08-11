@@ -3,6 +3,7 @@ import os
 import subprocess
 from io import BytesIO
 
+import attr
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT, ISOLATION_LEVEL_REPEATABLE_READ
 from psycopg2.extras import RealDictConnection
@@ -62,7 +63,14 @@ FROM
 '''
 
 
+@attr.s(cmp=False)
 class PostgreSQLBackend(BaseBackend):
+    dbname = attr.ib()
+    user = attr.ib()
+    password = attr.ib()
+    host = attr.ib()
+    port = attr.ib(convert=str)
+    verbosity = attr.ib(convert=int, default=0)
     sequences_filename = 'dump/sequences.sql'
     initial_setup_files = BaseBackend.initial_setup_files + (sequences_filename, )
     connections = {
@@ -187,6 +195,8 @@ class PostgreSQLBackend(BaseBackend):
         self.restore_search_path(search_path)
 
     def recreate_database(self, owner=None):
+        if owner is None:
+            owner = self.user
         self.drop_connections(self.dbname)
         super(PostgreSQLBackend, self).recreate_database(owner)
 

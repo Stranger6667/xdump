@@ -3,7 +3,7 @@ import zipfile
 
 import pytest
 
-from .conftest import DATABASE, EMPLOYEES_SQL, IS_POSTGRES
+from .conftest import DATABASE, EMPLOYEES_SQL, IS_POSTGRES, IS_SQLITE
 
 
 def test_logging(backend, capsys):
@@ -65,12 +65,20 @@ class TestRecreating:
 
     def test_create_database(self, backend, db_helper):
         dbname = db_helper.get_new_database_name()
-        backend.create_database(dbname, backend.user)
+        if IS_POSTGRES:
+            backend.create_database(dbname, backend.user)
+        elif IS_SQLITE:
+            backend.create_database(dbname)
         assert db_helper.is_database_exists(dbname)
 
+    @pytest.mark.parametrize('owner', (False, True))
     @pytest.mark.usefixtures('schema', 'data')
-    def test_recreate_database(self, backend, db_helper):
-        backend.recreate_database()
+    def test_recreate_database(self, backend, db_helper, owner):
+        if IS_POSTGRES and owner:
+            owner = backend.user
+        else:
+            owner = None
+        backend.recreate_database(owner)
         assert db_helper.is_database_exists(backend.dbname)
 
     def test_non_existent_db(self, backend, db_helper):

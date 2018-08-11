@@ -59,17 +59,14 @@ DEFAULT_PARAMETERS = [
 ] + COMMON_DECORATORS
 
 
-def base_dump(backend_path, user, password, host, port, dbname, verbosity, output, full, partial, compression, schema,
-              data):
+def base_dump(backend_path, output, full, partial, compression, schema, data, **kwargs):
     """Common implementation of dump command. Writes a few logs, imports a backend and makes a dump."""
     compression = COMPRESSION_MAPPING[compression]
 
     click.echo('Dumping ...')
     click.echo('Output file: {0}'.format(output))
 
-    backend = init_backend(
-        backend_path, dbname=dbname, host=host, port=port, user=user, password=password, verbosity=verbosity
-    )
+    backend = init_backend(backend_path, **kwargs)
     backend.dump(
         output, full_tables=full, partial_tables=partial, compression=compression, dump_schema=schema,
         dump_data=data
@@ -79,11 +76,11 @@ def base_dump(backend_path, user, password, host, port, dbname, verbosity, outpu
 
 @apply_decorators(DEFAULT_PARAMETERS + PG_DECORATORS)
 def postgres(user, password, host, port, dbname, verbosity, output, full, partial, compression, schema, data):
-    base_dump('xdump.postgresql.PostgreSQLBackend', user, password, host, port, dbname, verbosity, output, full,
-              partial, compression, schema, data)
+    base_dump('xdump.postgresql.PostgreSQLBackend', output, full, partial, compression, schema, data, user=user,
+              password=password, host=host, port=port, dbname=dbname, verbosity=verbosity)
 
 
 @apply_decorators(DEFAULT_PARAMETERS)
 def sqlite(dbname, verbosity, output, full, partial, compression, schema, data):
-    base_dump('xdump.sqlite.SQLiteBackend', None, None, None, None, dbname, verbosity, output, full, partial,
-              compression, schema, data)
+    base_dump('xdump.sqlite.SQLiteBackend', output, full, partial, compression, schema, data, dbname=dbname,
+              verbosity=verbosity)

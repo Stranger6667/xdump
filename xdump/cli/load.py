@@ -21,13 +21,11 @@ DEFAULT_PARAMETERS = [
 ] + COMMON_DECORATORS
 
 
-def base_load(backend_path, user, password, host, port, dbname, verbosity, input, cleanup_method):
+def base_load(backend_path, input, cleanup_method, **kwargs):
     click.echo('Loading ...')
     click.echo('Input file: {0}'.format(input))
 
-    backend = init_backend(
-        backend_path, dbname=dbname, host=host, port=port, user=user, password=password, verbosity=verbosity
-    )
+    backend = init_backend(backend_path, **kwargs)
 
     if cleanup_method == 'truncate':
         backend.truncate()
@@ -40,10 +38,10 @@ def base_load(backend_path, user, password, host, port, dbname, verbosity, input
 
 @apply_decorators(DEFAULT_PARAMETERS + PG_DECORATORS)
 def postgres(user, password, host, port, dbname, verbosity, input, cleanup_method):
-    base_load('xdump.postgresql.PostgreSQLBackend', user, password, host, port, dbname, verbosity, input,
-              cleanup_method)
+    base_load('xdump.postgresql.PostgreSQLBackend', input, cleanup_method, user=user, password=password, host=host,
+              port=port, dbname=dbname, verbosity=verbosity)
 
 
 @apply_decorators(DEFAULT_PARAMETERS)
 def sqlite(dbname, verbosity, input, cleanup_method):
-    base_load('xdump.sqlite.SQLiteBackend', None, None, None, None, dbname, verbosity, input, cleanup_method)
+    base_load('xdump.sqlite.SQLiteBackend', input, cleanup_method, dbname=dbname, verbosity=verbosity)
