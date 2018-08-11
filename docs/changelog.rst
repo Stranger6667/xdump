@@ -17,7 +17,7 @@ Changed
 
 - Do not try to load schema if it is absent in the dump. `#39`_
 - ``xdump.sqlite.SQLiteBackend`` now accepts only ``dbname`` and ``verbosity``. `#52`_
-- Now Django's ``xload`` command doesn't recreate the DB, but provides a non required option ``--cleanup-method`` for
+- Now Django's ``xload`` command doesn't recreate the DB but provides a non required option ``--cleanup-method`` for
   choosing how to clean-up the database before the dump loading. `#53`_
 
 `0.5.0`_ - 2018-08-02
@@ -49,8 +49,8 @@ Added
 Fixed
 ~~~~~
 
-- Querying for relations by read-only user in PostgreSQL. `#21`_
-- Constraint names clashing on different tables. `#22`_
+- Querying for relations by a read-only user in PostgreSQL. `#21`_
+- Constraint names were clashing on different tables. `#22`_
 
 `0.3.1`_ - 2018-06-19
 ---------------------
