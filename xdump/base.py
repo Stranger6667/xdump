@@ -237,11 +237,6 @@ class BaseBackend(object):
             self.initial_setup(archive)
             self.load_data(archive)
 
-    def is_dump_without_schema(self, filename):
-        archive = zipfile.ZipFile(filename)
-        name_list = archive.namelist()
-        return all(name not in name_list for name in self.initial_setup_files)
-
     def initial_setup(self, archive):
         """
         Loads schema and initial database configuration.
