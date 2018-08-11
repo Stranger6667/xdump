@@ -180,15 +180,15 @@ Run ``xload`` command::
 
 Possible options to both commands:
 
-- ``alias`` - allows you to choose database config from DATABASES, that is used during the execution;
-- ``backend`` - importable string, that leads to custom dump backend class.
+- ``-a/--alias`` - allows you to choose database config from ``DATABASES``, that is used during the execution;
+- ``-b/--backend`` - importable string, that leads to custom dump backend class.
 
 Options for ``xdump`` command:
-- ``dump_schema`` - controls if the schema should be included;
-- ``dump_data`` - controls if the data should be included.
+- ``-s/--dump-schema`` - controls if the schema should be included;
+- ``-d/--dump-data`` - controls if the data should be included.
 
 Options for ``xload`` command:
-- ``truncate`` - truncate data instead of DB re-creation.
+- ``-m/--cleanup-method`` - optionally re-creates DB or truncates the data.
 
 NOTE. If the dump has no schema inside, DB won't be re-created.
 
@@ -207,7 +207,6 @@ And usage is:
 .. code-block:: bash
 
     $ make sync-production TARGET=john@production.com PYTHON=/path/to/python/in/venv
-
 
 Python support
 ==============

@@ -8,7 +8,7 @@ class Command(XDumpCommand):
     def add_arguments(self, parser):
         super(Command, self).add_arguments(parser)
         parser.add_argument(
-            '-d', '--dump_data',
+            '-d', '--dump-data',
             action='store',
             dest='dump_data',
             help='Control if the data should be dumped.',
@@ -16,7 +16,7 @@ class Command(XDumpCommand):
             default=True,
         )
         parser.add_argument(
-            '-s', '--dump_schema',
+            '-s', '--dump-schema',
             action='store',
             dest='dump_schema',
             help='Control if the schema should be dumped.',

@@ -19,6 +19,8 @@ Changed
 - ``xdump.sqlite.SQLiteBackend`` now accepts only ``dbname`` and ``verbosity``. `#52`_
 - Now Django's ``xload`` command doesn't recreate the DB but provides a non required option ``--cleanup-method`` for
   choosing how to clean-up the database before the dump loading. `#53`_
+- Django's ``xload`` command options are renamed.
+  ``--dump_data`` -> ``--dump-data`` and ``--dump_schema`` -> ``--dump-schema``.
 
 `0.5.0`_ - 2018-08-02
 ---------------------
