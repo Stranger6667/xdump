@@ -66,7 +66,7 @@ def test_custom_backend_via_config(settings, db_helper, archive_filename):
 def test_xload(archive_filename, db_helper):
     call_command('xdump', archive_filename)
     assert db_helper.get_tickets_count() == 5
-    call_command('xload', archive_filename)
+    call_command('xload', archive_filename, cleanup_method='recreate')
     assert db_helper.get_tickets_count() == 0
 
 
@@ -112,7 +112,7 @@ def test_truncate_load(backend, archive_filename, db_helper):
     except sqlite3.OperationalError:
         pass
 
-    call_command('xload', archive_filename, truncate=True)
+    call_command('xload', archive_filename, cleanup_method='truncate')
 
     assert db_helper.get_tables_count() == 3
     assert backend.run('SELECT name FROM groups') == [{'name': 'Admin'}, {'name': 'User'}]
