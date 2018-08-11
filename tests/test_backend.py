@@ -71,9 +71,14 @@ class TestRecreating:
             backend.create_database(dbname)
         assert db_helper.is_database_exists(dbname)
 
+    @pytest.mark.parametrize('owner', (False, True))
     @pytest.mark.usefixtures('schema', 'data')
-    def test_recreate_database(self, backend, db_helper):
-        backend.recreate_database()
+    def test_recreate_database(self, backend, db_helper, owner):
+        if IS_POSTGRES and owner:
+            owner = backend.user
+        else:
+            owner = None
+        backend.recreate_database(owner)
         assert db_helper.is_database_exists(backend.dbname)
 
     def test_non_existent_db(self, backend, db_helper):

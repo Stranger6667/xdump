@@ -17,6 +17,7 @@ Changed
 ~~~~~~~
 
 - Do not recreate the DB if it the schema is absent in the dump. `#39`_
+- ``xdump.sqlite.SQLiteBackend`` now accepts only ``dbname`` and ``verbosity``. `#52`_
 
 `0.5.0`_ - 2018-08-02
 ---------------------
@@ -105,6 +106,7 @@ Fixed
 .. _0.1.2: https://github.com/Stranger6667/xdump/compare/0.1.1...0.1.2
 .. _0.1.1: https://github.com/Stranger6667/xdump/compare/0.1.0...0.1.1
 
+.. _#52: https://github.com/Stranger6667/xdump/issues/52
 .. _#48: https://github.com/Stranger6667/xdump/issues/48
 .. _#45: https://github.com/Stranger6667/xdump/issues/45
 .. _#44: https://github.com/Stranger6667/xdump/issues/44
