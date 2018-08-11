@@ -238,13 +238,7 @@ def backend(request):
         from xdump.sqlite import SQLiteBackend
 
         dbname = request.getfixturevalue('dbname')
-        return SQLiteBackend(
-            dbname=dbname,
-            user=None,
-            password=None,
-            host=None,
-            port=None,
-        )
+        return SQLiteBackend(dbname=dbname)
 
 
 @pytest.fixture

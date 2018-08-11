@@ -17,16 +17,16 @@ pytestmark = pytest.mark.usefixtures('schema', 'data')
 def setup(settings, backend):
     if IS_POSTGRES:
         settings.DATABASES['default']['ENGINE'] = 'django.db.backends.postgresql'
+        for source, target in (
+                ('user', 'USER'),
+                ('password', 'PASSWORD'),
+                ('host', 'HOST'),
+                ('port', 'PORT')
+        ):
+            settings.DATABASES['default'][target] = getattr(backend, source)
     elif IS_SQLITE:
         settings.DATABASES['default']['ENGINE'] = 'django.db.backends.sqlite'
-    for source, target in (
-            ('dbname', 'NAME'),
-            ('user', 'USER'),
-            ('password', 'PASSWORD'),
-            ('host', 'HOST'),
-            ('port', 'PORT')
-    ):
-        settings.DATABASES['default'][target] = getattr(backend, source)
+    settings.DATABASES['default']['NAME'] = backend.dbname
     settings.XDUMP = {
         'FULL_TABLES': ('groups', ),
         'PARTIAL_TABLES': {'employees': EMPLOYEES_SQL}

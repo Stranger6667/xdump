@@ -47,8 +47,8 @@ class XDumpCommand(BaseCommand):
                     'django.db.backends.postgresql_psycopg2': 'xdump.postgresql.PostgreSQLBackend',
                     'django.db.backends.sqlite': 'xdump.sqlite.SQLiteBackend',
                 }[configuration['ENGINE']]
-        backend_class = import_string(backend)
-        return backend_class(
+        return _init_backend(
+            backend,
             dbname=configuration['NAME'],
             user=configuration.get('USER'),
             password=configuration.get('PASSWORD'),
@@ -65,3 +65,9 @@ class XDumpCommand(BaseCommand):
             'full_tables': settings.XDUMP['FULL_TABLES'],
             'partial_tables': settings.XDUMP['PARTIAL_TABLES'],
         }
+
+
+def _init_backend(path, **kwargs):
+    backend_class = import_string(path)
+    init_kwargs = {attr.name: kwargs[attr.name] for attr in backend_class.__attrs_attrs__}
+    return backend_class(**init_kwargs)

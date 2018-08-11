@@ -4,20 +4,12 @@ import zipfile
 from contextlib import contextmanager
 from time import time
 
-import attr
-
 from ._compat import lru_cache
 from .logging import get_logger
 
 
-@attr.s(cmp=False)
 class BaseBackend(object):
-    dbname = attr.ib()
-    user = attr.ib()
-    password = attr.ib()
-    host = attr.ib()
-    port = attr.ib(convert=str)
-    verbosity = attr.ib(convert=int, default=0)
+    dbname = None
     connections = {'default': {}}
     schema_filename = 'dump/schema.sql'
     initial_setup_files = (schema_filename, )
@@ -193,6 +185,9 @@ class BaseBackend(object):
         schema = self.dump_schema()
         file.writestr(self.schema_filename, schema)
 
+    def dump_schema(self):
+        raise NotImplementedError
+
     def write_full_tables(self, file, tables):
         """
         Writes a complete tables dump to the archive.
@@ -217,8 +212,6 @@ class BaseBackend(object):
         """
         Drops all connections to the database, drops the database and creates it again.
         """
-        if owner is None:
-            owner = self.user
         self.drop_database(self.dbname)
         self.create_database(self.dbname, owner)
         self.cache_clear()
