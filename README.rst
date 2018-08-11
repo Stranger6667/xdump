@@ -192,7 +192,7 @@ Options for ``xload`` command:
 
 - ``-m/--cleanup-method`` - optionally re-creates DB or truncates the data.
 
-NOTE. If the dump has no schema inside, DB won't be re-created.
+**NOTE**. If the dump has no schema inside, DB won't be re-created.
 
 The following ``make`` command could be useful to get a configured dump from production to your local machine:
 
