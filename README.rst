@@ -184,10 +184,12 @@ Possible options to both commands:
 - ``-b/--backend`` - importable string, that leads to custom dump backend class.
 
 Options for ``xdump`` command:
+
 - ``-s/--dump-schema`` - controls if the schema should be included;
 - ``-d/--dump-data`` - controls if the data should be included.
 
 Options for ``xload`` command:
+
 - ``-m/--cleanup-method`` - optionally re-creates DB or truncates the data.
 
 NOTE. If the dump has no schema inside, DB won't be re-created.
@@ -202,7 +204,7 @@ The following ``make`` command could be useful to get a configured dump from pro
         ssh -t $(TARGET) "rm /tmp/dump.zip"
         DJANGO_SETTINGS_MODULE=settings.local $(PYTHON) manage.py xload ./dump.zip
 
-And usage is:
+And the usage is:
 
 .. code-block:: bash
 
