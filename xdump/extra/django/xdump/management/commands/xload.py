@@ -8,17 +8,18 @@ class Command(XDumpCommand):
     def add_arguments(self, parser):
         super(Command, self).add_arguments(parser)
         parser.add_argument(
-            '-t', '--truncate',
+            '-m', '--cleanup-method',
             action='store',
-            dest='truncate',
-            help='Truncates tables instead of DB re-creation.',
+            nargs='?',
+            choices=['recreate', 'truncate'],
+            dest='cleanup_method',
+            help='Method of DB cleaning up',
             required=False,
-            default=False,
         )
 
     def _handle(self, filename, backend, **options):
-        if options['truncate']:
+        if options['cleanup_method'] == 'truncate':
             backend.truncate()
-        elif not backend.is_dump_without_schema(filename):
+        elif options['cleanup_method'] == 'recreate':
             backend.recreate_database()
         backend.load(filename)
