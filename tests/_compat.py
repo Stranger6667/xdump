@@ -1,4 +1,4 @@
-
+# pylint: disable=unused-import
 try:
     from unittest.mock import Mock, patch
 except ImportError:

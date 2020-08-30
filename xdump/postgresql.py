@@ -11,13 +11,12 @@ from psycopg2.extras import RealDictConnection
 from .base import BaseBackend
 from .utils import make_options
 
-
 TABLES_SQL = "SELECT relname FROM pg_class WHERE relkind = 'r' AND relnamespace = 'public'::regnamespace"
 SEQUENCES_SQL = "SELECT relname FROM pg_class WHERE relkind = 'S'"
 # The query below doesn't use `information_schema.table_constraints` and ``, but instead uses its modified versions
 # to mitigate permissions insufficiency on that views (they filter data by permissions of the current user)
 # Subqueries for constraints other than FOREIGN KEY are removed as well.
-BASE_RELATIONS_QUERY = '''
+BASE_RELATIONS_QUERY = """
 SELECT
   DISTINCT
   TC.constraint_name,
@@ -60,7 +59,7 @@ FROM
         CL.relkind = 'r'
       ) AS CCU
     ON CCU.constraint_name = TC.constraint_name
-'''
+"""
 
 
 @attr.s(cmp=False)
@@ -71,16 +70,16 @@ class PostgreSQLBackend(BaseBackend):
     host = attr.ib()
     port = attr.ib(convert=str)
     verbosity = attr.ib(convert=int, default=0)
-    sequences_filename = 'dump/sequences.sql'
-    initial_setup_files = BaseBackend.initial_setup_files + (sequences_filename, )
+    sequences_filename = "dump/sequences.sql"
+    initial_setup_files = BaseBackend.initial_setup_files + (sequences_filename,)
     connections = {
-        'default': {
-            'isolation_level': ISOLATION_LEVEL_REPEATABLE_READ,
+        "default": {
+            "isolation_level": ISOLATION_LEVEL_REPEATABLE_READ,
         },
-        'maintenance': {
-            'dbname': 'postgres',
-            'isolation_level': ISOLATION_LEVEL_AUTOCOMMIT,
-        }
+        "maintenance": {
+            "dbname": "postgres",
+            "isolation_level": ISOLATION_LEVEL_AUTOCOMMIT,
+        },
     }
 
     def connect(self, isolation_level, **kwargs):
@@ -93,30 +92,33 @@ class PostgreSQLBackend(BaseBackend):
         return super(PostgreSQLBackend, self).get_connection_kwargs(connection_factory=RealDictConnection, **kwargs)
 
     def handle_run_exception(self, exc):
-        """
-        Suppress exception when there is nothing to fetch.
-        """
-        if str(exc) != 'no results to fetch':
+        """Suppress exception when there is nothing to fetch."""
+        if str(exc) != "no results to fetch":
             raise exc
 
     @property
     def run_dump_environment(self):
         environ = os.environ.copy()
         if self.password:
-            environ['PGPASSWORD'] = self.password
+            environ["PGPASSWORD"] = self.password
         return environ
 
     def run_dump(self, *args, **kwargs):
         process = subprocess.Popen(
             (
-                'pg_dump',
-                '-U', self.user,
-                '-h', self.host,
-                '-p', self.port,
-                '-d', self.dbname,
-            ) + args,
+                "pg_dump",
+                "-U",
+                self.user,
+                "-h",
+                self.host,
+                "-p",
+                self.port,
+                "-d",
+                self.dbname,
+            )
+            + args,
             stdout=subprocess.PIPE,
-            env=self.run_dump_environment
+            env=self.run_dump_environment,
         )
         return process.communicate()[0]
 
@@ -125,26 +127,19 @@ class PostgreSQLBackend(BaseBackend):
         self.write_sequences(file)
 
     def dump_schema(self):
-        """
-        Produces SQL for the schema of the database.
-        """
+        """Produces SQL for the schema of the database."""
         return self.run_dump(
-            '-s',  # Schema-only
-            '-x',  # Do not dump privileges
+            "-s",  # Schema-only
+            "-x",  # Do not dump privileges
         )
 
     def get_sequences(self):
-        """
-        To be able to modify our loaded dump we need to load exact sequences states.
-        """
-        return [row['relname'] for row in self.run(SEQUENCES_SQL)]
+        """To be able to modify our loaded dump we need to load exact sequences states."""
+        return [row["relname"] for row in self.run(SEQUENCES_SQL)]
 
     def dump_sequences(self):
         sequences = self.get_sequences()
-        return self.run_dump(
-            '-a',  # Data-only
-            *make_options('-t', sequences)
-        )
+        return self.run_dump("-a", *make_options("-t", sequences))  # Data-only
 
     def write_sequences(self, file):
         sequences = self.dump_sequences()
@@ -152,21 +147,21 @@ class PostgreSQLBackend(BaseBackend):
 
     def add_related_data(self, full_tables, partial_tables):
         if full_tables:
-            query = BASE_RELATIONS_QUERY + ' WHERE NOT(CCU.foreign_table_name = ANY(%(full_tables)s))'
-            kwargs = {'full_tables': list(full_tables)}
+            query = BASE_RELATIONS_QUERY + " WHERE NOT(CCU.foreign_table_name = ANY(%(full_tables)s))"
+            kwargs = {"full_tables": list(full_tables)}
         else:
             query = BASE_RELATIONS_QUERY
             kwargs = {}
-        self._related_data = self.run(query, kwargs)
+        self._related_data = self.run(query, kwargs)  # pylint: disable=attribute-defined-outside-init
         super(PostgreSQLBackend, self).add_related_data(full_tables, partial_tables)
 
     def get_foreign_keys(self, table, full_tables=(), recursive=False):
         # NOTE, `full_tables` is not used, because it is filtered in `BASE_RELATIONS_QUERY`
         for foreign_key in self._related_data:
-            if foreign_key['table_name'] == table:
-                if foreign_key['foreign_table_name'] == table and not recursive:
+            if foreign_key["table_name"] == table:
+                if foreign_key["foreign_table_name"] == table and not recursive:
                     continue
-                if foreign_key['foreign_table_name'] != table and recursive:
+                if foreign_key["foreign_table_name"] != table and recursive:
                     continue
                 yield foreign_key
 
@@ -176,15 +171,13 @@ class PostgreSQLBackend(BaseBackend):
             return cursor.copy_expert(sql, file, **kwargs)
 
     def export_to_csv(self, sql):
-        """
-        Exports the result of the given sql to CSV with a help of COPY statement.
-        """
+        """Exports the result of the given sql to CSV with a help of COPY statement."""
         with BytesIO() as output:
-            self.copy_expert('COPY ({0}) TO STDOUT WITH CSV HEADER'.format(sql), output)
+            self.copy_expert("COPY ({0}) TO STDOUT WITH CSV HEADER".format(sql), output)
             return output.getvalue()
 
     def get_search_path(self):
-        return self.run('show search_path;')[0]['search_path']
+        return self.run("show search_path;")[0]["search_path"]
 
     def restore_search_path(self, search_path):
         self.run("SELECT pg_catalog.set_config('search_path', '{0}', false);".format(search_path))
@@ -201,17 +194,24 @@ class PostgreSQLBackend(BaseBackend):
         super(PostgreSQLBackend, self).recreate_database(owner)
 
     def drop_connections(self, dbname):
-        self.run('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s', [dbname], 'maintenance')
+        self.run(
+            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s",
+            [dbname],
+            "maintenance",
+        )
 
     def drop_database(self, dbname):
-        self.run('DROP DATABASE IF EXISTS {0}'.format(dbname), using='maintenance')
+        self.run("DROP DATABASE IF EXISTS {0}".format(dbname), using="maintenance")
 
     def create_database(self, dbname, owner):
-        self.run('CREATE DATABASE {0} WITH OWNER {1}'.format(dbname, owner), using='maintenance')
+        self.run(
+            "CREATE DATABASE {0} WITH OWNER {1}".format(dbname, owner),
+            using="maintenance",
+        )
 
     def truncate(self):
-        tables = [row['relname'] for row in self.run(TABLES_SQL)]
-        self.run('TRUNCATE TABLE {0} RESTART IDENTITY CASCADE'.format(', '.join(tables)))
+        tables = [row["relname"] for row in self.run(TABLES_SQL)]
+        self.run("TRUNCATE TABLE {0} RESTART IDENTITY CASCADE".format(", ".join(tables)))
 
     def load_data_file(self, table_name, fd):
-        self.copy_expert('COPY {0} FROM STDIN WITH CSV HEADER'.format(table_name), fd)
+        self.copy_expert("COPY {0} FROM STDIN WITH CSV HEADER".format(table_name), fd)

@@ -3,4 +3,4 @@ from django.apps import AppConfig
 
 
 class XDumpConfig(AppConfig):
-    name = 'xdump.extra.django.xdump'
+    name = "xdump.extra.django.xdump"

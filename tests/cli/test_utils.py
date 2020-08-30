@@ -3,12 +3,11 @@ from xdump.cli.utils import apply_decorators, import_backend
 
 
 def test_import_backend():
-    backend_class = import_backend('xdump.sqlite.SQLiteBackend')
+    backend_class = import_backend("xdump.sqlite.SQLiteBackend")
     assert issubclass(backend_class, BaseBackend)
 
 
 def test_apply_decorators():
-
     def dec1(func):
         func.foo = 1
         return func
