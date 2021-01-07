@@ -6,6 +6,11 @@ Changelog
 `Unreleased`_
 -------------
 
+Changed
+~~~~~~~
+
+- Required version of click package
+
 `0.6.0`_ - 2018-08-11
 ---------------------
 
