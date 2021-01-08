@@ -11,7 +11,7 @@ with open("README.rst") as file:
 install_requires = [
     "attrs<19",
     "psycopg2<2.8",
-    "click<7",
+    "click>=6",
 ]
 if sys.version_info[0] == 2:
     install_requires.append("repoze.lru==0.7")
