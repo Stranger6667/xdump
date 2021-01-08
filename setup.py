@@ -9,8 +9,8 @@ with open("README.rst") as file:
     long_description = file.read()
 
 install_requires = [
-    "attrs<19",
-    "psycopg2<2.8",
+    "attrs",
+    "psycopg2",
     "click>=6",
 ]
 if sys.version_info[0] == 2:
