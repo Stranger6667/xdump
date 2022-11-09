@@ -9,7 +9,7 @@ with open("README.rst") as file:
     long_description = file.read()
 
 install_requires = [
-    "attrs",
+    "attrs>=19.2.0",
     "psycopg2",
     "click>=6",
 ]

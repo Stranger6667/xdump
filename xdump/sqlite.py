@@ -27,7 +27,7 @@ TABLES_SQL = "SELECT name AS table_name FROM sqlite_master WHERE type='table'"
 @attr.s(cmp=False)
 class SQLiteBackend(BaseBackend):
     dbname = attr.ib()
-    verbosity = attr.ib(convert=int, default=0)
+    verbosity = attr.ib(converter=int, default=0)
 
     def __attrs_post_init__(self):
         if sqlite3.sqlite_version_info < (3, 8, 3):
