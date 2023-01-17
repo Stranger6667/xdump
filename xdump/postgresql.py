@@ -68,8 +68,8 @@ class PostgreSQLBackend(BaseBackend):
     user = attr.ib()
     password = attr.ib()
     host = attr.ib()
-    port = attr.ib(convert=str)
-    verbosity = attr.ib(convert=int, default=0)
+    port = attr.ib(converter=str)
+    verbosity = attr.ib(converter=int, default=0)
     sequences_filename = "dump/sequences.sql"
     initial_setup_files = BaseBackend.initial_setup_files + (sequences_filename,)
     connections = {
