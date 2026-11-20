@@ -1,5 +1,3 @@
-import sqlite3
-
 import pytest
 
 from xdump.cli import dump, load
@@ -8,10 +6,7 @@ from ..conftest import DATABASE, IS_POSTGRES, IS_SQLITE
 
 
 @pytest.fixture
-def cli(request, archive_filename, isolated_cli_runner):
-    if IS_SQLITE and sqlite3.sqlite_version_info < (3, 8, 3):
-        pytest.skip("Unsupported SQLite version")
-
+def cli(request, archive_filename, cli_runner):
     commands = {
         "sqlite": {
             "dump": dump.sqlite,
@@ -44,7 +39,7 @@ def cli(request, archive_filename, isolated_cli_runner):
                     "-D",
                     dsn_parameters["dbname"],
                 )
-            return isolated_cli_runner.invoke(command, default_args + args, catch_exceptions=False)
+            return cli_runner.invoke(command, default_args + args, catch_exceptions=False)
 
         def dump(self, *args):
             return self.call(commands["dump"], "-o", archive_filename, *args)

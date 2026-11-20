@@ -1,4 +1,4 @@
-import sqlite3
+from unittest.mock import patch
 
 import pytest
 
@@ -7,10 +7,6 @@ from xdump.sqlite import SQLiteBackend
 pytestmark = [pytest.mark.sqlite]
 
 
-@pytest.mark.skipif(
-    sqlite3.sqlite_version_info >= (3, 8, 3),
-    reason="Not relevant for newer SQLite version",
-)
 def test_old_version_info():
-    with pytest.raises(RuntimeError):
+    with patch("sqlite3.sqlite_version_info", (3, 8, 2)), pytest.raises(RuntimeError):
         SQLiteBackend(dbname="tests")

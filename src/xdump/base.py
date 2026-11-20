@@ -4,12 +4,10 @@ import zipfile
 from contextlib import contextmanager
 from time import time
 
-from ._compat import lru_cache
 from .logging import get_logger
 
 
 class BaseBackend(object):
-    dbname = None
     connections = {"default": {}}
     schema_filename = "dump/schema.sql"
     initial_setup_files = (schema_filename,)
@@ -36,13 +34,23 @@ class BaseBackend(object):
 
     # Connection
 
-    @lru_cache()
-    def get_connection(self, name="default"):
-        return self.connect(**self.connections[name])
+    @property
+    def _open_connections(self):
+        return self.__dict__.setdefault("_open_connections_cache", {})
 
-    @lru_cache()
+    @property
+    def _open_cursors(self):
+        return self.__dict__.setdefault("_open_cursors_cache", {})
+
+    def get_connection(self, name="default"):
+        if name not in self._open_connections:
+            self._open_connections[name] = self.connect(**self.connections[name])
+        return self._open_connections[name]
+
     def get_cursor(self, name="default"):
-        return self.get_connection(name).cursor()
+        if name not in self._open_cursors:
+            self._open_cursors[name] = self.get_connection(name).cursor()
+        return self._open_cursors[name]
 
     def connect(self, *args, **kwargs):
         """Create a connection to the database."""
@@ -54,8 +62,11 @@ class BaseBackend(object):
         return kwargs
 
     def cache_clear(self):
-        self.get_cursor.cache_clear()
-        self.get_connection.cache_clear()
+        """Closes all open connections."""
+        self._open_cursors.clear()
+        for connection in self._open_connections.values():
+            connection.close()
+        self._open_connections.clear()
 
     # Low-level commands executors
 

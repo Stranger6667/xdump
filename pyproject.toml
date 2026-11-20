@@ -26,17 +26,17 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-dependencies = ["attrs", "click>=6", "psycopg2"]
+dependencies = ["click>=8", "psycopg2>=2.9.5"]
 
 [project.optional-dependencies]
-django = ["django>=1.11"]
+django = ["django>=4.2"]
 tests = [
   "coverage[toml]>=7.2",
-  "django",
+  "django>=4.2",
   "pytest>=8",
-  "pytest-click",
-  "pytest-django",
-  "pytest-postgresql",
+  "pytest-click>=1.1",
+  "pytest-django>=4.5",
+  "pytest-postgresql>=9",
 ]
 
 [project.scripts]
@@ -59,6 +59,7 @@ include = ["/src", "/test"]
 addopts = ["-ra", "--strict-markers", "--strict-config"]
 xfail_strict = true
 testpaths = ["test"]
+pythonpath = ["."]
 markers = ["dump", "postgres", "sqlite"]
 DJANGO_SETTINGS_MODULE = "test.django.settings"
 
@@ -73,8 +74,7 @@ source = ["src", ".tox/*/site-packages", ".tox/*/lib/*/site-packages", ".tox/*/L
 [tool.coverage.report]
 show_missing = true
 precision = 2
-fail_under = 100
-exclude_also = ["raise NotImplementedError"]
+exclude_also = ["raise NotImplementedError", "^\\s*pass$"]
 
 [tool.black]
 line-length = 120

@@ -1,9 +1,10 @@
 # coding: utf-8
 import os
+import re
 import subprocess
+from dataclasses import dataclass
 from io import BytesIO
 
-import attr
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT, ISOLATION_LEVEL_REPEATABLE_READ
 from psycopg2.extras import RealDictConnection
@@ -13,6 +14,9 @@ from .utils import make_options
 
 TABLES_SQL = "SELECT relname FROM pg_class WHERE relkind = 'r' AND relnamespace = 'public'::regnamespace"
 SEQUENCES_SQL = "SELECT relname FROM pg_class WHERE relkind = 'S'"
+# `pg_dump` from PostgreSQL 13.22 / 14.19 / 15.14 / 16.10 / 17.6 wraps its output in `\restrict` / `\unrestrict` psql
+# meta-commands (CVE-2025-8714). They are not SQL, and the server rejects them.
+PSQL_RESTRICT_RE = re.compile(rb"^\\(un)?restrict .*\n?", re.MULTILINE)
 # The query below doesn't use `information_schema.table_constraints` and ``, but instead uses its modified versions
 # to mitigate permissions insufficiency on that views (they filter data by permissions of the current user)
 # Subqueries for constraints other than FOREIGN KEY are removed as well.
@@ -62,14 +66,14 @@ FROM
 """
 
 
-@attr.s(cmp=False)
+@dataclass(eq=False)
 class PostgreSQLBackend(BaseBackend):
-    dbname = attr.ib()
-    user = attr.ib()
-    password = attr.ib()
-    host = attr.ib()
-    port = attr.ib(convert=str)
-    verbosity = attr.ib(convert=int, default=0)
+    dbname: str
+    user: str
+    password: str | None
+    host: str
+    port: str
+    verbosity: int = 0
     sequences_filename = "dump/sequences.sql"
     initial_setup_files = BaseBackend.initial_setup_files + (sequences_filename,)
     connections = {
@@ -81,6 +85,10 @@ class PostgreSQLBackend(BaseBackend):
             "isolation_level": ISOLATION_LEVEL_AUTOCOMMIT,
         },
     }
+
+    def __post_init__(self):
+        self.port = str(self.port)
+        self.verbosity = int(self.verbosity)
 
     def connect(self, isolation_level, **kwargs):
         kwargs = self.get_connection_kwargs(**kwargs)
@@ -181,6 +189,9 @@ class PostgreSQLBackend(BaseBackend):
 
     def restore_search_path(self, search_path):
         self.run("SELECT pg_catalog.set_config('search_path', '{0}', false);".format(search_path))
+
+    def run_setup_file(self, sql):
+        return super().run_setup_file(PSQL_RESTRICT_RE.sub(b"", sql))
 
     def initial_setup(self, archive):
         search_path = self.get_search_path()

@@ -33,6 +33,8 @@ def test_cleanup_methods(cli, archive_filename, backend, cleanup_method, dump_kw
         pass
     result = cli.load("-i", archive_filename, "-m", cleanup_method)
     assert not result.exception
+    # The CLI uses its own connections; the recreated database is not visible through the old ones
+    backend.cache_clear()
     assert backend.run("SELECT name FROM groups") == [
         {"name": "Admin"},
         {"name": "User"},

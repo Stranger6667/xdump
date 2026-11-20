@@ -243,7 +243,7 @@ SNOW = b"5,John,Snow,3,4,2"
 class TestAutoSelect:
     @pytest.fixture(autouse=True)
     def setup(self, request, backend, archive_filename, db_helper, schema, data):
-        config = request.node.get_marker("dump")
+        config = request.node.get_closest_marker("dump")
         backend.dump(archive_filename, *config.args)
         self.archive = zipfile.ZipFile(archive_filename)
         self.db_helper = db_helper
