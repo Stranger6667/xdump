@@ -24,7 +24,7 @@ def setup(settings, backend):
         ):
             settings.DATABASES["default"][target] = getattr(backend, source)
     elif IS_SQLITE:
-        settings.DATABASES["default"]["ENGINE"] = "django.db.backends.sqlite"
+        settings.DATABASES["default"]["ENGINE"] = "django.db.backends.sqlite3"
     settings.DATABASES["default"]["NAME"] = backend.dbname
     settings.XDUMP = {
         "FULL_TABLES": ("groups",),
