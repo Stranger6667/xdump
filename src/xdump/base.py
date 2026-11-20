@@ -1,16 +1,16 @@
-# coding: utf-8
 import os
 import zipfile
 from contextlib import contextmanager
 from time import time
+from typing import Any
 
 from .logging import get_logger
 
 
-class BaseBackend(object):
-    connections = {"default": {}}
+class BaseBackend:
+    connections: dict[str, dict[str, Any]] = {"default": {}}
     schema_filename = "dump/schema.sql"
-    initial_setup_files = (schema_filename,)
+    initial_setup_files: tuple[str, ...] = (schema_filename,)
     data_dir = "dump/data/"
 
     @property
@@ -168,7 +168,7 @@ class BaseBackend(object):
         if table_name in full_tables:
             source = foreign_key["table_name"]
         elif table_name in partial_tables:
-            source = "({}) T".format(partial_tables[table_name])
+            source = f"({partial_tables[table_name]}) T"
         else:
             return
         return """
@@ -177,9 +177,7 @@ class BaseBackend(object):
             FROM {foreign_table_name}
             WHERE {foreign_column_name} IN (
                 SELECT {column_name} FROM {source}
-            )""".format(
-            source=source, **foreign_key
-        )
+            )""".format(source=source, **foreign_key)
 
     def write_initial_setup(self, file):
         self.write_schema(file)
@@ -195,7 +193,7 @@ class BaseBackend(object):
     def write_full_tables(self, file, tables):
         """Writes a complete tables dump to the archive."""
         for table_name in tables:
-            self.write_data_file(file, table_name, "SELECT * FROM {0}".format(table_name))
+            self.write_data_file(file, table_name, f"SELECT * FROM {table_name}")
 
     def write_partial_tables(self, file, config):
         for table_name, sql in config.items():
@@ -203,7 +201,7 @@ class BaseBackend(object):
 
     def write_data_file(self, file, table_name, sql):
         data = self.export_to_csv(sql)
-        file.writestr("{0}{1}.csv".format(self.data_dir, table_name), data)
+        file.writestr(f"{self.data_dir}{table_name}.csv", data)
 
     def export_to_csv(self, sql):
         raise NotImplementedError

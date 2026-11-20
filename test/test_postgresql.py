@@ -1,4 +1,3 @@
-# coding: utf-8
 from unittest.mock import Mock, patch
 
 import pytest
@@ -17,8 +16,9 @@ def test_write_sequences(backend, archive, db_helper):
 def test_handling_error(backend):
     import psycopg2
 
-    with patch("psycopg2.extras.DictCursorBase.fetchall", side_effect=psycopg2.ProgrammingError), pytest.raises(
-        psycopg2.ProgrammingError
+    with (
+        patch("psycopg2.extras.DictCursorBase.fetchall", side_effect=psycopg2.ProgrammingError),
+        pytest.raises(psycopg2.ProgrammingError),
     ):
         backend.run("BEGIN")
 
@@ -53,10 +53,7 @@ def test_get_sequences(backend):
 def test_run_dump(backend, db_helper):
     schema = backend.run_dump()
     db_helper.assert_schema(schema)
-    if db_helper.is_search_path_fixed:
-        template = "COPY public.{0}"
-    else:
-        template = "COPY {0}"
+    template = "COPY public.{0}" if db_helper.is_search_path_fixed else "COPY {0}"
     for table in ("groups", "employees", "tickets"):
         assert template.format(table).encode() in schema
 

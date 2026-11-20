@@ -1,4 +1,4 @@
-# coding: utf-8
+import contextlib
 import os
 import sqlite3
 import subprocess
@@ -10,7 +10,7 @@ from .base import BaseBackend
 
 
 def dict_factory(cursor, row):
-    return {description[0]: value for description, value in zip(cursor.description, row)}
+    return {description[0]: value for description, value in zip(cursor.description, row, strict=True)}
 
 
 def force_string(value):
@@ -30,7 +30,7 @@ class SQLiteBackend(BaseBackend):
     def __post_init__(self):
         self.verbosity = int(self.verbosity)
         if sqlite3.sqlite_version_info < (3, 8, 3):
-            raise RuntimeError("Minimum supported SQLite version is 3.8.3. You have {0}".format(sqlite3.sqlite_version))
+            raise RuntimeError(f"Minimum supported SQLite version is 3.8.3. You have {sqlite3.sqlite_version}")
 
     def connect(self, *args, **kwargs):
         connection = sqlite3.connect(self.dbname)
@@ -51,7 +51,7 @@ class SQLiteBackend(BaseBackend):
 
     def run(self, sql, params=(), using="default"):
         sql = force_string(sql)
-        return super(SQLiteBackend, self).run(sql, params, using)
+        return super().run(sql, params, using)
 
     def run_many(self, sql):
         with self.log_query(sql):
@@ -66,7 +66,7 @@ class SQLiteBackend(BaseBackend):
     def _get_foreign_keys(self, table):
         cache = self.__dict__.setdefault("_foreign_keys_cache", {})
         if table not in cache:
-            cache[table] = self.run("PRAGMA foreign_key_list({})".format(table))
+            cache[table] = self.run(f"PRAGMA foreign_key_list({table})")
         return cache[table]
 
     def get_foreign_keys(self, table, full_tables=(), recursive=False):
@@ -87,7 +87,7 @@ class SQLiteBackend(BaseBackend):
     def dump(self, filename, full_tables=(), partial_tables=None, **kwargs):
         self.input_check(full_tables, partial_tables)
         self.begin_immediate()
-        super(SQLiteBackend, self).dump(filename, full_tables=full_tables, partial_tables=partial_tables, **kwargs)
+        super().dump(filename, full_tables=full_tables, partial_tables=partial_tables, **kwargs)
 
     def dump_schema(self):
         return self.run_dump(self.dbname, ".schema")
@@ -108,22 +108,18 @@ class SQLiteBackend(BaseBackend):
             return output.getvalue().encode()
 
     def drop_database(self, dbname):
-        try:
+        with contextlib.suppress(FileNotFoundError):
             os.remove(dbname)
-        except FileNotFoundError:
-            pass
 
     def create_database(self, dbname, *args, **kwargs):
         sqlite3.connect(dbname).close()
 
     def truncate(self):
         for table in self.tables:
-            self.run("DELETE FROM {0}".format(table))
-        try:
+            self.run(f"DELETE FROM {table}")
+        # No autoincrements are defined in the DB
+        with contextlib.suppress(sqlite3.OperationalError):
             self.run("UPDATE sqlite_sequence SET seq=0")
-        except sqlite3.OperationalError:
-            # No autoincrements are defined in the DB
-            pass
 
     def run_setup_file(self, sql):
         self.run_many(sql)
@@ -135,10 +131,8 @@ class SQLiteBackend(BaseBackend):
                 fd = archive.open(name)
                 filename = os.path.basename(name).split(".")[0]
                 self.load_data_file(filename, fd)
-        try:
+        with contextlib.suppress(sqlite3.OperationalError):
             self.run("COMMIT")
-        except sqlite3.OperationalError:
-            pass
 
     def load_data_file(self, table_name, fd):
         reader = DictReader(fd.read().decode().split("\n"), delimiter=",")
@@ -146,6 +140,6 @@ class SQLiteBackend(BaseBackend):
         placeholders = ("?," * len(reader.fieldnames))[:-1]
         cursor = self.get_cursor()
         cursor.executemany(
-            "INSERT INTO {0} ({1}) VALUES ({2})".format(table_name, fields, placeholders),
+            f"INSERT INTO {table_name} ({fields}) VALUES ({placeholders})",
             [[line[k] for k in reader.fieldnames] for line in reader],
         )

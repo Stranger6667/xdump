@@ -7,14 +7,14 @@ import pytest
 def test_single_full_table(cli, archive_filename, db_helper):
     result = cli.dump("-f", "groups")
     assert not result.exception
-    assert result.output == "Dumping ...\nOutput file: {0}\nDone!\n".format(archive_filename)
+    assert result.output == f"Dumping ...\nOutput file: {archive_filename}\nDone!\n"
     archive = zipfile.ZipFile(archive_filename)
     db_helper.assert_groups(archive)
 
 
 @pytest.mark.usefixtures("schema", "data")
 def test_multiple_full_tables(cli, archive_filename, db_helper):
-    result = cli.dump("-f", "groups", "-f" "tickets")
+    result = cli.dump("-f", "groups", "-ftickets")
     assert not result.exception
     archive = zipfile.ZipFile(archive_filename)
     db_helper.assert_groups(archive)

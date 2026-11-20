@@ -1,4 +1,3 @@
-# coding: utf-8
 import zipfile
 
 import pytest
@@ -28,8 +27,8 @@ def test_logging_parametrized(backend, capsys):
         params = (1,)
     backend.run(query, params)
     out = capsys.readouterr()[0]
-    assert "Execute query: %s" % query in out
-    assert "Parameters: %s" % str(params) in out
+    assert f"Execute query: {query}" in out
+    assert f"Parameters: {str(params)}" in out
     assert "Execution time: " in out
 
 
@@ -77,10 +76,7 @@ class TestRecreating:
     @pytest.mark.parametrize("owner", (False, True))
     @pytest.mark.usefixtures("schema", "data")
     def test_recreate_database(self, backend, db_helper, owner):
-        if IS_POSTGRES and owner:
-            owner = backend.user
-        else:
-            owner = None
+        owner = backend.user if IS_POSTGRES and owner else None
         backend.recreate_database(owner)
         assert db_helper.is_database_exists(backend.dbname)
 

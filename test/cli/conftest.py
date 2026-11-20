@@ -18,7 +18,7 @@ def cli(request, archive_filename, cli_runner):
         },
     }[DATABASE]
 
-    class CLI(object):
+    class CLI:
         def call(self, command, *args):
             default_args = ()
             if IS_SQLITE:

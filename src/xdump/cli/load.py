@@ -24,7 +24,7 @@ DEFAULT_PARAMETERS = [
 
 def base_load(backend_path, input, cleanup_method, **kwargs):
     click.echo("Loading ...")
-    click.echo("Input file: {0}".format(input))
+    click.echo(f"Input file: {input}")
 
     backend = init_backend(backend_path, **kwargs)
     try:
