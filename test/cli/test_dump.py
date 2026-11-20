@@ -53,7 +53,7 @@ def test_partial_tables_invalid(cli):
     result = cli.dump("-p", "shit")
     assert result.exception
     assert result.output.endswith(
-        'Invalid value for "-p" / "--partial": partial table specification should be in '
+        "Invalid value for '-p' / '--partial': partial table specification should be in "
         'the following format: "table:select SQL"\n'
     )
 

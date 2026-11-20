@@ -1,4 +1,3 @@
-import sys
 import zipfile
 
 import click
@@ -32,10 +31,9 @@ def parse_partial(ctx, param, value):
 COMPRESSION_MAPPING = {
     "deflated": zipfile.ZIP_DEFLATED,
     "stored": zipfile.ZIP_STORED,
+    "bzip2": zipfile.ZIP_BZIP2,
+    "lzma": zipfile.ZIP_LZMA,
 }
-if sys.version_info[0] == 3:
-    # BZIP2 & LZMA are not available on Python 2
-    COMPRESSION_MAPPING.update(bzip2=zipfile.ZIP_BZIP2, lzma=zipfile.ZIP_LZMA)
 
 
 DEFAULT_PARAMETERS = [
@@ -82,14 +80,17 @@ def base_dump(backend_path, output, full, partial, compression, schema, data, **
     click.echo("Output file: {0}".format(output))
 
     backend = init_backend(backend_path, **kwargs)
-    backend.dump(
-        output,
-        full_tables=full,
-        partial_tables=partial,
-        compression=compression,
-        dump_schema=schema,
-        dump_data=data,
-    )
+    try:
+        backend.dump(
+            output,
+            full_tables=full,
+            partial_tables=partial,
+            compression=compression,
+            dump_schema=schema,
+            dump_data=data,
+        )
+    finally:
+        backend.cache_clear()
     click.echo("Done!")
 
 

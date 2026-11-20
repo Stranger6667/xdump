@@ -4,3 +4,4 @@ SECRET_KEY = "foo"
 INSTALLED_APPS = ("xdump.extra.django",)
 
 DATABASES = {"default": {}}
+USE_TZ = True

@@ -1,14 +1,12 @@
 # pylint: disable=redefined-outer-name
 import os
-import platform
 import sqlite3
 import zipfile
 from contextlib import contextmanager
+from dataclasses import dataclass
+from unittest.mock import DEFAULT, patch
 
-import attr
 import pytest
-
-from ._compat import patch
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 EMPLOYEES_SQL = """
@@ -33,13 +31,6 @@ DATABASE = os.environ["DB"]
 IS_POSTGRES = DATABASE == "postgres"
 IS_SQLITE = DATABASE == "sqlite"
 
-# Travis has only PostgreSQL 9.6
-if IS_POSTGRES and "TRAVIS" in os.environ:
-    from pytest_postgresql import factories
-
-    postgresql_proc = factories.postgresql_proc(executable="/usr/lib/postgresql/9.6/bin/pg_ctl")
-    postgresql = factories.postgresql("postgresql_proc")
-
 
 def is_search_path_fixed(connection):
     """Check if a security issue with `search_path` is fixed in the current PG version.
@@ -63,18 +54,16 @@ def dbname(tmpdir):
 
 @pytest.fixture
 def dsn_parameters(request):
-    postgresql = request.getfixturevalue("postgresql")
-    if platform.python_implementation() == "PyPy":
-        return dict(item.split("=") for item in postgresql.dsn.split())
-    return postgresql.get_dsn_parameters()
+    info = request.getfixturevalue("postgresql").info
+    return {"dbname": info.dbname, "user": info.user, "host": info.host, "port": info.port}
 
 
-@attr.s(cmp=False)
-class BackendWrapper(object):
+@dataclass(eq=False)
+class BackendWrapper:
     """Runs special commands for specific DB backend, that are useful for testing."""
 
-    backend = attr.ib()
-    request = attr.ib()
+    backend: object
+    request: pytest.FixtureRequest
 
     def is_database_exists(self, dbname):
         raise NotImplementedError
@@ -101,6 +90,7 @@ class BackendWrapper(object):
                 if not self.is_loaded:
                     self._insert()
                     self.is_loaded = True
+                return DEFAULT
 
             def _insert(self):
                 cursor.execute(query)
@@ -221,7 +211,7 @@ class SQLiteWrapper(BackendWrapper):
 
         class ConcurrentInsertEmulator(base_class):
             def _insert(self):
-                with pytest.raises(sqlite3.OperationalError, message="database is locked"):
+                with pytest.raises(sqlite3.OperationalError, match="database is locked"):
                     return base_class._insert(self)
 
         return ConcurrentInsertEmulator
@@ -233,7 +223,7 @@ def backend(request):
         from xdump.postgresql import PostgreSQLBackend
 
         parameters = request.getfixturevalue("dsn_parameters")
-        return PostgreSQLBackend(
+        backend = PostgreSQLBackend(
             dbname=parameters["dbname"],
             user=parameters["user"],
             password=None,
@@ -241,12 +231,12 @@ def backend(request):
             port=parameters["port"],
         )
     if IS_SQLITE:
-        if sqlite3.sqlite_version_info < (3, 8, 3):
-            pytest.skip("Unsupported SQLite version")
         from xdump.sqlite import SQLiteBackend
 
         dbname = request.getfixturevalue("dbname")
-        return SQLiteBackend(dbname=dbname)
+        backend = SQLiteBackend(dbname=dbname)
+    yield backend
+    backend.cache_clear()
 
 
 @pytest.fixture
@@ -259,14 +249,14 @@ def db_helper(request, backend):
 @pytest.fixture
 def cursor(request):
     if IS_POSTGRES:
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-
         postgresql = request.getfixturevalue("postgresql")
-        postgresql.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        return postgresql.cursor()
+        postgresql.autocommit = True
+        yield postgresql.cursor()
     if IS_SQLITE:
         dbname = request.getfixturevalue("dbname")
-        return sqlite3.connect(dbname, isolation_level=None).cursor()
+        connection = sqlite3.connect(dbname, isolation_level=None)
+        yield connection.cursor()
+        connection.close()
 
 
 def read_sql_file(filename):
@@ -300,7 +290,7 @@ def data(execute_file):
 
 
 def pytest_runtest_setup(item):
-    if isinstance(item, item.Function) and not item.get_marker(DATABASE) and ALL.intersection(item.keywords):
+    if isinstance(item, pytest.Function) and not item.get_closest_marker(DATABASE) and ALL.intersection(item.keywords):
         pytest.skip("Cannot run on {0}".format(DATABASE))
 
 

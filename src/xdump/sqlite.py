@@ -2,12 +2,10 @@
 import os
 import sqlite3
 import subprocess
-import sys
 from csv import DictReader, DictWriter
+from dataclasses import dataclass
+from io import StringIO
 
-import attr
-
-from ._compat import FileNotFoundError, StringIO, lru_cache
 from .base import BaseBackend
 
 
@@ -24,12 +22,13 @@ def force_string(value):
 TABLES_SQL = "SELECT name AS table_name FROM sqlite_master WHERE type='table'"
 
 
-@attr.s(cmp=False)
+@dataclass(eq=False)
 class SQLiteBackend(BaseBackend):
-    dbname = attr.ib()
-    verbosity = attr.ib(convert=int, default=0)
+    dbname: str
+    verbosity: int = 0
 
-    def __attrs_post_init__(self):
+    def __post_init__(self):
+        self.verbosity = int(self.verbosity)
         if sqlite3.sqlite_version_info < (3, 8, 3):
             raise RuntimeError("Minimum supported SQLite version is 3.8.3. You have {0}".format(sqlite3.sqlite_version))
 
@@ -64,9 +63,11 @@ class SQLiteBackend(BaseBackend):
         cursor = self.get_cursor()
         cursor.execute("BEGIN IMMEDIATE")
 
-    @lru_cache()
     def _get_foreign_keys(self, table):
-        return self.run("PRAGMA foreign_key_list({})".format(table))
+        cache = self.__dict__.setdefault("_foreign_keys_cache", {})
+        if table not in cache:
+            cache[table] = self.run("PRAGMA foreign_key_list({})".format(table))
+        return cache[table]
 
     def get_foreign_keys(self, table, full_tables=(), recursive=False):
         for foreign_key in self._get_foreign_keys(table):
@@ -82,9 +83,6 @@ class SQLiteBackend(BaseBackend):
                 "foreign_column_name": foreign_key["to"],
                 "column_name": foreign_key["from"],
             }
-        if sys.version_info[:2] < (3, 6):
-            # Before 3.6 sqlite3 used to implicitly commit an open transaction in this case.
-            self.begin_immediate()
 
     def dump(self, filename, full_tables=(), partial_tables=None, **kwargs):
         self.input_check(full_tables, partial_tables)
@@ -95,21 +93,19 @@ class SQLiteBackend(BaseBackend):
         return self.run_dump(self.dbname, ".schema")
 
     def export_to_csv(self, sql):
-        output = StringIO()
         cursor = self.get_cursor()
         with self.log_query(sql):
             cursor.execute(sql)
             data = cursor.fetchall()
-        writer = DictWriter(
-            output,
-            fieldnames=[column[0] for column in cursor.description],
-            lineterminator="\n",
-        )
-        writer.writeheader()
-        writer.writerows(data)
-        result = output.getvalue().encode()
-        output.close()  # StringIO doesn't support context manager protocol on Python 2
-        return result
+        with StringIO() as output:
+            writer = DictWriter(
+                output,
+                fieldnames=[column[0] for column in cursor.description],
+                lineterminator="\n",
+            )
+            writer.writeheader()
+            writer.writerows(data)
+            return output.getvalue().encode()
 
     def drop_database(self, dbname):
         try:
@@ -118,8 +114,7 @@ class SQLiteBackend(BaseBackend):
             pass
 
     def create_database(self, dbname, *args, **kwargs):
-        with sqlite3.connect(dbname):
-            pass
+        sqlite3.connect(dbname).close()
 
     def truncate(self):
         for table in self.tables:

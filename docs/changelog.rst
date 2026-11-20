@@ -15,11 +15,22 @@ Changed
 ~~~~~~~
 
 - Required version of click package
+- Minimum supported versions: ``click`` 8.0, ``psycopg2`` 2.9.5 and ``Django`` 4.2.
+- ``cache_clear`` closes the backend's open connections and no longer affects other backend instances.
+
+Fixed
+~~~~~
+
+- ``ImportError`` on import of ``xdump.sqlite`` on Python 3.
+- Loading PostgreSQL dumps made by ``pg_dump`` 13.22, 14.19, 15.14, 16.10, 17.6 and newer, which contain ``\restrict`` meta-commands.
+- Unclosed database connections after CLI and Django commands.
 
 Removed
 ~~~~~~~
 
 - Support for Python 2.7, 3.4 - 3.10 and PyPy 2.
+- Dependency on ``attrs``. Backends are dataclasses now.
+- PostgreSQL backend on PyPy, as ``psycopg2`` does not support it.
 
 `0.6.0`_ - 2018-08-11
 ---------------------

@@ -72,6 +72,8 @@ def test_xload(archive_filename, db_helper):
     call_command("xdump", archive_filename)
     assert db_helper.get_tickets_count() == 5
     call_command("xload", archive_filename, cleanup_method="recreate")
+    # The command uses its own connections; the recreated database is not visible through the old ones
+    db_helper.backend.cache_clear()
     assert db_helper.get_tickets_count() == 0
 
 

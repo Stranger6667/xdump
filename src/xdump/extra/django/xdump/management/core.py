@@ -1,4 +1,6 @@
 # coding: utf-8
+from dataclasses import fields
+
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils.module_loading import import_string
@@ -32,7 +34,10 @@ class XDumpCommand(BaseCommand):
 
     def handle(self, filename, alias, backend, verbosity, **options):
         backend = self.get_xdump_backend(alias, backend, verbosity)
-        self._handle(filename, backend, **options)
+        try:
+            self._handle(filename, backend, **options)
+        finally:
+            backend.cache_clear()
 
     def _handle(self, filename, backend, **options):
         raise NotImplementedError
@@ -70,5 +75,5 @@ class XDumpCommand(BaseCommand):
 
 def _init_backend(path, **kwargs):
     backend_class = import_string(path)
-    init_kwargs = {attr.name: kwargs[attr.name] for attr in backend_class.__attrs_attrs__}
+    init_kwargs = {field.name: kwargs[field.name] for field in fields(backend_class)}
     return backend_class(**init_kwargs)

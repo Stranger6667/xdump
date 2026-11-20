@@ -27,13 +27,14 @@ def base_load(backend_path, input, cleanup_method, **kwargs):
     click.echo("Input file: {0}".format(input))
 
     backend = init_backend(backend_path, **kwargs)
-
-    if cleanup_method == "truncate":
-        backend.truncate()
-    elif cleanup_method == "recreate":
-        backend.recreate_database()
-
-    backend.load(input)
+    try:
+        if cleanup_method == "truncate":
+            backend.truncate()
+        elif cleanup_method == "recreate":
+            backend.recreate_database()
+        backend.load(input)
+    finally:
+        backend.cache_clear()
     click.echo("Done!")
 
 

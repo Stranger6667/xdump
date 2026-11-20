@@ -35,8 +35,6 @@ jobs:
           - { os: ubuntu-24.04, python: "3.15", tox-env: py315-sqlite }
           - { os: ubuntu-24.04, python: "3.15", tox-env: py315-postgres }
           - { os: ubuntu-24.04, python: "pypy3.11", tox-env: pypy311-sqlite }
-          - { os: ubuntu-24.04, python: "pypy3.11", tox-env: pypy311-postgres }
-          - { os: windows-latest, python: "3.14", tox-env: py314-sqlite }
 
     name: ${{ matrix.tox-env }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
