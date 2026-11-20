@@ -17,6 +17,7 @@
 - `ImportError` on import of `xdump.sqlite` on Python 3.
 - Loading PostgreSQL dumps made by `pg_dump` 13.22, 14.19, 15.14, 16.10, 17.6 and newer, which contain `\restrict` meta-commands.
 - Unclosed database connections after CLI and Django commands.
+- Detecting the SQLite backend in Django commands. The `django.db.backends.sqlite3` engine raised `KeyError`.
 
 ### Removed
 
