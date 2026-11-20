@@ -48,8 +48,8 @@ def is_search_path_fixed(connection):
 
 
 @pytest.fixture
-def dbname(tmpdir):
-    return str(tmpdir.join("test.db"))
+def dbname(tmp_path):
+    return str(tmp_path / "test.db")
 
 
 @pytest.fixture
@@ -200,8 +200,8 @@ class SQLiteWrapper(BackendWrapper):
         )[0]["count"]
 
     def get_new_database_name(self):
-        tmpdir = self.request.getfixturevalue("tmpdir")
-        return str(tmpdir.join("test_xxx.db"))
+        tmp_path = self.request.getfixturevalue("tmp_path")
+        return str(tmp_path / "test_xxx.db")
 
     def _get_concurrent_insert_class(self, query):
         base_class = super()._get_concurrent_insert_class(query)
@@ -293,8 +293,8 @@ def pytest_runtest_setup(item):
 
 
 @pytest.fixture
-def archive_filename(tmpdir):
-    return str(tmpdir.join("dump.zip"))
+def archive_filename(tmp_path):
+    return str(tmp_path / "dump.zip")
 
 
 @pytest.fixture

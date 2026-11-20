@@ -52,7 +52,6 @@ class XDumpCommand(BaseCommand):
             else:
                 backend = {
                     "django.db.backends.postgresql": "xdump.postgresql.PostgreSQLBackend",
-                    "django.db.backends.postgresql_psycopg2": "xdump.postgresql.PostgreSQLBackend",
                     "django.db.backends.sqlite3": "xdump.sqlite.SQLiteBackend",
                 }[configuration["ENGINE"]]
         return _init_backend(
