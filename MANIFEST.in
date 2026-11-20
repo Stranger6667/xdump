@@ -1,5 +1,0 @@
-include setup.py
-include LICENSE
-include README.rst
-recursive-include xdump *.py
-recursive-exclude tests *.py

@@ -1,6 +1,84 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "xdump"
+dynamic = ["version"]
+description = "Consistent partial database dump utility"
+keywords = ["database", "dump", "postgresql", "sqlite"]
+authors = [{ name = "Dmitry Dygalo", email = "dmitry@dygalo.dev" }]
+maintainers = [{ name = "Dmitry Dygalo", email = "dmitry@dygalo.dev" }]
+readme = "README.rst"
+license = "MIT"
+requires-python = ">=3.11"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = ["attrs", "click>=6", "psycopg2"]
+
+[project.optional-dependencies]
+django = ["django>=1.11"]
+tests = [
+  "coverage[toml]>=7.2",
+  "django",
+  "pytest>=8",
+  "pytest-click",
+  "pytest-django",
+  "pytest-postgresql",
+]
+
+[project.scripts]
+xdump = "xdump.cli.dump:dump"
+xload = "xdump.cli.load:load"
+
+[project.urls]
+Changelog = "https://github.com/Stranger6667/xdump/blob/master/docs/changelog.rst"
+"Bug Tracker" = "https://github.com/Stranger6667/xdump/issues"
+Funding = "https://github.com/sponsors/Stranger6667"
+"Source Code" = "https://github.com/Stranger6667/xdump"
+
+[tool.hatch.version]
+path = "src/xdump/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/test"]
+
+[tool.pytest.ini_options]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+xfail_strict = true
+testpaths = ["test"]
+markers = ["dump", "postgres", "sqlite"]
+DJANGO_SETTINGS_MODULE = "test.django.settings"
+
+[tool.coverage.run]
+parallel = true
+branch = true
+source_pkgs = ["xdump"]
+
+[tool.coverage.paths]
+source = ["src", ".tox/*/site-packages", ".tox/*/lib/*/site-packages", ".tox/*/Lib/site-packages"]
+
+[tool.coverage.report]
+show_missing = true
+precision = 2
+fail_under = 100
+exclude_also = ["raise NotImplementedError"]
+
 [tool.black]
 line-length = 120
-target_version = ["py37"]
+target_version = ["py311"]
 
 [tool.isort]
 # config compatible with Black

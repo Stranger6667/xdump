@@ -6,10 +6,20 @@ Changelog
 `Unreleased`_
 -------------
 
+Added
+~~~~~
+
+- Support for Python 3.11 - 3.15.
+
 Changed
 ~~~~~~~
 
 - Required version of click package
+
+Removed
+~~~~~~~
+
+- Support for Python 2.7, 3.4 - 3.10 and PyPy 2.
 
 `0.6.0`_ - 2018-08-11
 ---------------------
