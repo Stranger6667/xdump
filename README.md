@@ -2,7 +2,6 @@
 
 [![Build](https://github.com/Stranger6667/xdump/actions/workflows/build.yml/badge.svg)](https://github.com/Stranger6667/xdump/actions/workflows/build.yml)
 [![Coverage](https://codecov.io/github/Stranger6667/xdump/coverage.svg?branch=master)](https://codecov.io/github/Stranger6667/xdump?branch=master)
-[![Documentation](https://readthedocs.org/projects/xdump/badge/?version=stable)](https://xdump.readthedocs.io/en/stable/?badge=stable)
 [![Version](https://img.shields.io/pypi/v/xdump.svg)](https://pypi.org/project/xdump/)
 [![Python versions](https://img.shields.io/pypi/pyversions/xdump.svg)](https://pypi.org/project/xdump/)
 [![License](https://img.shields.io/pypi/l/xdump.svg)](https://opensource.org/licenses/MIT)
