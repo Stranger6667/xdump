@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased](https://github.com/Stranger6667/xdump/compare/0.6.0...HEAD)
+## [Unreleased](https://github.com/Stranger6667/xdump/compare/v1.0.0...HEAD)
+
+## [1.0.0](https://github.com/Stranger6667/xdump/compare/0.6.0...v1.0.0) - 2026-11-20
 
 ### Added
 
