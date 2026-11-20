@@ -54,7 +54,7 @@ repos:
         language: system
         types_or: [python, pyi]
         require_serial: true
-        exclude: ^(docs|test)/
+        exclude: ^test/
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.17.6
