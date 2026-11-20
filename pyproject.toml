@@ -44,7 +44,7 @@ xdump = "xdump.cli.dump:dump"
 xload = "xdump.cli.load:load"
 
 [project.urls]
-Changelog = "https://github.com/Stranger6667/xdump/blob/master/docs/changelog.rst"
+Changelog = "https://github.com/Stranger6667/xdump/blob/master/CHANGELOG.md"
 "Bug Tracker" = "https://github.com/Stranger6667/xdump/issues"
 Funding = "https://github.com/sponsors/Stranger6667"
 "Source Code" = "https://github.com/Stranger6667/xdump"
