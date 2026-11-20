@@ -1,6 +1,8 @@
 import click
 
-COMMON_DECORATORS = [
+from .utils import Decorator
+
+COMMON_DECORATORS: list[Decorator] = [
     click.option("-D", "--dbname", required=True, help="database to work with"),
     click.option(
         "-v",
@@ -13,7 +15,7 @@ COMMON_DECORATORS = [
 ]
 
 
-PG_DECORATORS = [
+PG_DECORATORS: list[Decorator] = [
     click.option("-U", "--user", required=True, help="connect as specified database user"),
     click.option("-W", "--password", help="password for the DB connection"),
     click.option(

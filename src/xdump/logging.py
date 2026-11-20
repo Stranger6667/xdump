@@ -5,7 +5,7 @@ DEFAULT_LOGGING_LEVEL = logging.CRITICAL
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 
-def get_logger(name, verbosity):
+def get_logger(name: str, verbosity: int) -> logging.Logger:
     """Returns simple console logger."""
     logger = logging.getLogger(name)
     logger.setLevel(

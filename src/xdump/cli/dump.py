@@ -1,21 +1,22 @@
 import zipfile
+from typing import Any
 
 import click
 
 from .base import COMMON_DECORATORS, PG_DECORATORS
-from .utils import apply_decorators, init_backend
+from .utils import Decorator, apply_decorators, init_backend
 
 
 @click.group(name="xdump")
 @click.version_option()
-def dump():
+def dump() -> None:
     pass
 
 
-def parse_partial(ctx, param, value):
+def parse_partial(ctx: click.Context, param: click.Parameter, value: tuple[str, ...]) -> dict[str, str]:
     """Parse values for `partial` option. They should be in the format `table:select SQL`."""
 
-    def parse_value(value):
+    def parse_value(value: str) -> tuple[str, str]:
         try:
             table_name, sql = value.split(":", 1)
             return table_name.strip(), sql.strip()
@@ -36,7 +37,7 @@ COMPRESSION_MAPPING = {
 }
 
 
-DEFAULT_PARAMETERS = [
+DEFAULT_PARAMETERS: list[Decorator] = [
     dump.command(),
     click.option("-o", "--output", required=True, help="output file name"),
     click.option(
@@ -72,9 +73,17 @@ DEFAULT_PARAMETERS = [
 ] + COMMON_DECORATORS
 
 
-def base_dump(backend_path, output, full, partial, compression, schema, data, **kwargs):
+def base_dump(
+    backend_path: str,
+    output: str,
+    full: tuple[str, ...],
+    partial: dict[str, str],
+    compression: str,
+    schema: bool,
+    data: bool,
+    **kwargs: Any,
+) -> None:
     """Common implementation of dump command. Writes a few logs, imports a backend and makes a dump."""
-    compression = COMPRESSION_MAPPING[compression]
 
     click.echo("Dumping ...")
     click.echo(f"Output file: {output}")
@@ -85,7 +94,7 @@ def base_dump(backend_path, output, full, partial, compression, schema, data, **
             output,
             full_tables=full,
             partial_tables=partial,
-            compression=compression,
+            compression=COMPRESSION_MAPPING[compression],
             dump_schema=schema,
             dump_data=data,
         )
@@ -96,19 +105,19 @@ def base_dump(backend_path, output, full, partial, compression, schema, data, **
 
 @apply_decorators(DEFAULT_PARAMETERS + PG_DECORATORS)
 def postgres(
-    user,
-    password,
-    host,
-    port,
-    dbname,
-    verbosity,
-    output,
-    full,
-    partial,
-    compression,
-    schema,
-    data,
-):
+    user: str,
+    password: str | None,
+    host: str,
+    port: str,
+    dbname: str,
+    verbosity: int,
+    output: str,
+    full: tuple[str, ...],
+    partial: dict[str, str],
+    compression: str,
+    schema: bool,
+    data: bool,
+) -> None:
     base_dump(
         "xdump.postgresql.PostgreSQLBackend",
         output,
@@ -127,7 +136,16 @@ def postgres(
 
 
 @apply_decorators(DEFAULT_PARAMETERS)
-def sqlite(dbname, verbosity, output, full, partial, compression, schema, data):
+def sqlite(
+    dbname: str,
+    verbosity: int,
+    output: str,
+    full: tuple[str, ...],
+    partial: dict[str, str],
+    compression: str,
+    schema: bool,
+    data: bool,
+) -> None:
     base_dump(
         "xdump.sqlite.SQLiteBackend",
         output,
