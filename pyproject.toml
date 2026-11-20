@@ -9,7 +9,7 @@ description = "Consistent partial database dump utility"
 keywords = ["database", "dump", "postgresql", "sqlite"]
 authors = [{ name = "Dmitry Dygalo", email = "dmitry@dygalo.dev" }]
 maintainers = [{ name = "Dmitry Dygalo", email = "dmitry@dygalo.dev" }]
-readme = "README.rst"
+readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
 classifiers = [
