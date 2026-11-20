@@ -2,20 +2,23 @@ import contextlib
 import os
 import sqlite3
 import subprocess
+import zipfile
+from collections.abc import Iterator, Sequence
 from csv import DictReader, DictWriter
 from dataclasses import dataclass
 from io import StringIO
+from typing import IO, Any
 
-from .base import BaseBackend
+from .base import BaseBackend, ForeignKey, Row
 
 
-def dict_factory(cursor, row):
+def dict_factory(cursor: sqlite3.Cursor, row: tuple[Any, ...]) -> Row:
     return {description[0]: value for description, value in zip(cursor.description, row, strict=True)}
 
 
-def force_string(value):
+def force_string(value: str | bytes) -> str:
     if isinstance(value, bytes):
-        value = value.decode()
+        return value.decode()
     return value
 
 
@@ -27,49 +30,49 @@ class SQLiteBackend(BaseBackend):
     dbname: str
     verbosity: int = 0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.verbosity = int(self.verbosity)
         if sqlite3.sqlite_version_info < (3, 8, 3):
             raise RuntimeError(f"Minimum supported SQLite version is 3.8.3. You have {sqlite3.sqlite_version}")
 
-    def connect(self, *args, **kwargs):
+    def connect(self, **kwargs: Any) -> sqlite3.Connection:
         connection = sqlite3.connect(self.dbname)
         connection.row_factory = dict_factory
         return connection
 
-    def run_dump(self, *args, **kwargs):
+    def run_dump(self, *args: str) -> bytes:
         process = subprocess.Popen(("sqlite3",) + args, stdout=subprocess.PIPE)
         return process.communicate()[0]
 
     @property
-    def tables(self):
+    def tables(self) -> list[str]:
         return [result["table_name"] for result in self.run(TABLES_SQL)]
 
-    def get_tables_for_related_data(self, full_tables, partial_tables):
+    def get_tables_for_related_data(self, full_tables: Sequence[str], partial_tables: dict[str, str]) -> Sequence[str]:
         # Return all tables for SQLite
         return self.tables
 
-    def run(self, sql, params=(), using="default"):
-        sql = force_string(sql)
-        return super().run(sql, params, using)
+    def run(self, sql: str | bytes, params: Any = (), using: str = "default") -> list[Row]:
+        return super().run(force_string(sql), params, using)
 
-    def run_many(self, sql):
+    def run_many(self, sql: str | bytes) -> None:
         with self.log_query(sql):
-            sql = force_string(sql)
             cursor = self.get_cursor()
-            cursor.executescript(sql)
+            cursor.executescript(force_string(sql))
 
-    def begin_immediate(self):
+    def begin_immediate(self) -> None:
         cursor = self.get_cursor()
         cursor.execute("BEGIN IMMEDIATE")
 
-    def _get_foreign_keys(self, table):
-        cache = self.__dict__.setdefault("_foreign_keys_cache", {})
+    def _get_foreign_keys(self, table: str) -> list[Row]:
+        cache: dict[str, list[Row]] = self.__dict__.setdefault("_foreign_keys_cache", {})
         if table not in cache:
             cache[table] = self.run(f"PRAGMA foreign_key_list({table})")
         return cache[table]
 
-    def get_foreign_keys(self, table, full_tables=(), recursive=False):
+    def get_foreign_keys(
+        self, table: str, full_tables: Sequence[str] = (), recursive: bool = False
+    ) -> Iterator[ForeignKey]:
         for foreign_key in self._get_foreign_keys(table):
             if foreign_key["table"] in full_tables:
                 continue
@@ -84,15 +87,23 @@ class SQLiteBackend(BaseBackend):
                 "column_name": foreign_key["from"],
             }
 
-    def dump(self, filename, full_tables=(), partial_tables=None, **kwargs):
+    def dump(
+        self,
+        filename: str,
+        full_tables: Sequence[str] = (),
+        partial_tables: dict[str, str] | None = None,
+        compression: int = zipfile.ZIP_DEFLATED,
+        dump_schema: bool = True,
+        dump_data: bool = True,
+    ) -> None:
         self.input_check(full_tables, partial_tables)
         self.begin_immediate()
-        super().dump(filename, full_tables=full_tables, partial_tables=partial_tables, **kwargs)
+        super().dump(filename, full_tables, partial_tables, compression, dump_schema, dump_data)
 
-    def dump_schema(self):
+    def dump_schema(self) -> bytes:
         return self.run_dump(self.dbname, ".schema")
 
-    def export_to_csv(self, sql):
+    def export_to_csv(self, sql: str) -> bytes:
         cursor = self.get_cursor()
         with self.log_query(sql):
             cursor.execute(sql)
@@ -107,24 +118,24 @@ class SQLiteBackend(BaseBackend):
             writer.writerows(data)
             return output.getvalue().encode()
 
-    def drop_database(self, dbname):
+    def drop_database(self, dbname: str) -> None:
         with contextlib.suppress(FileNotFoundError):
             os.remove(dbname)
 
-    def create_database(self, dbname, *args, **kwargs):
+    def create_database(self, dbname: str, owner: str | None = None) -> None:
         sqlite3.connect(dbname).close()
 
-    def truncate(self):
+    def truncate(self) -> None:
         for table in self.tables:
             self.run(f"DELETE FROM {table}")
         # No autoincrements are defined in the DB
         with contextlib.suppress(sqlite3.OperationalError):
             self.run("UPDATE sqlite_sequence SET seq=0")
 
-    def run_setup_file(self, sql):
+    def run_setup_file(self, sql: bytes) -> None:
         self.run_many(sql)
 
-    def load_data(self, archive):
+    def load_data(self, archive: zipfile.ZipFile) -> None:
         """Loads all data from data files inside the archive to the database."""
         for name in archive.namelist():
             if name.startswith(self.data_dir):
@@ -134,12 +145,13 @@ class SQLiteBackend(BaseBackend):
         with contextlib.suppress(sqlite3.OperationalError):
             self.run("COMMIT")
 
-    def load_data_file(self, table_name, fd):
+    def load_data_file(self, table_name: str, fd: IO[bytes]) -> None:
         reader = DictReader(fd.read().decode().split("\n"), delimiter=",")
-        fields = ",".join(reader.fieldnames)
-        placeholders = ("?," * len(reader.fieldnames))[:-1]
+        fieldnames = reader.fieldnames or []
+        fields = ",".join(fieldnames)
+        placeholders = ("?," * len(fieldnames))[:-1]
         cursor = self.get_cursor()
         cursor.executemany(
             f"INSERT INTO {table_name} ({fields}) VALUES ({placeholders})",
-            [[line[k] for k in reader.fieldnames] for line in reader],
+            [[line[k] for k in fieldnames] for line in reader],
         )

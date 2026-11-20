@@ -1,10 +1,16 @@
+from typing import Any
+
+from django.core.management.base import CommandParser
+
+from xdump.base import BaseBackend
+
 from ..core import XDumpCommand
 
 
 class Command(XDumpCommand):
     help = "Creates an SQL dump with latest data."
 
-    def add_arguments(self, parser):
+    def add_arguments(self, parser: CommandParser) -> None:
         super().add_arguments(parser)
         parser.add_argument(
             "-d",
@@ -25,7 +31,7 @@ class Command(XDumpCommand):
             default=True,
         )
 
-    def _handle(self, filename, backend, **options):
+    def _handle(self, filename: str, backend: BaseBackend, **options: Any) -> None:
         backend.dump(
             filename, dump_data=options["dump_data"], dump_schema=options["dump_schema"], **self.get_dump_kwargs()
         )

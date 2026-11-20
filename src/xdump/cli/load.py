@@ -1,16 +1,18 @@
+from typing import Any
+
 import click
 
 from .base import COMMON_DECORATORS, PG_DECORATORS
-from .utils import apply_decorators, init_backend
+from .utils import Decorator, apply_decorators, init_backend
 
 
 @click.group(name="xload")
 @click.version_option()
-def load():
+def load() -> None:
     pass
 
 
-DEFAULT_PARAMETERS = [
+DEFAULT_PARAMETERS: list[Decorator] = [
     load.command(),
     click.option("-i", "--input", required=True, help="input file name"),
     click.option(
@@ -22,7 +24,7 @@ DEFAULT_PARAMETERS = [
 ] + COMMON_DECORATORS
 
 
-def base_load(backend_path, input, cleanup_method, **kwargs):
+def base_load(backend_path: str, input: str, cleanup_method: str | None, **kwargs: Any) -> None:
     click.echo("Loading ...")
     click.echo(f"Input file: {input}")
 
@@ -39,7 +41,16 @@ def base_load(backend_path, input, cleanup_method, **kwargs):
 
 
 @apply_decorators(DEFAULT_PARAMETERS + PG_DECORATORS)
-def postgres(user, password, host, port, dbname, verbosity, input, cleanup_method):
+def postgres(
+    user: str,
+    password: str | None,
+    host: str,
+    port: str,
+    dbname: str,
+    verbosity: int,
+    input: str,
+    cleanup_method: str | None,
+) -> None:
     base_load(
         "xdump.postgresql.PostgreSQLBackend",
         input,
@@ -54,7 +65,7 @@ def postgres(user, password, host, port, dbname, verbosity, input, cleanup_metho
 
 
 @apply_decorators(DEFAULT_PARAMETERS)
-def sqlite(dbname, verbosity, input, cleanup_method):
+def sqlite(dbname: str, verbosity: int, input: str, cleanup_method: str | None) -> None:
     base_load(
         "xdump.sqlite.SQLiteBackend",
         input,
