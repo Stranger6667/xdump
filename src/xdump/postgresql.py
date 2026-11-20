@@ -1,4 +1,3 @@
-# coding: utf-8
 import os
 import re
 import subprocess
@@ -97,7 +96,7 @@ class PostgreSQLBackend(BaseBackend):
         return connection
 
     def get_connection_kwargs(self, **kwargs):
-        return super(PostgreSQLBackend, self).get_connection_kwargs(connection_factory=RealDictConnection, **kwargs)
+        return super().get_connection_kwargs(connection_factory=RealDictConnection, **kwargs)
 
     def handle_run_exception(self, exc):
         """Suppress exception when there is nothing to fetch."""
@@ -131,7 +130,7 @@ class PostgreSQLBackend(BaseBackend):
         return process.communicate()[0]
 
     def write_initial_setup(self, file):
-        super(PostgreSQLBackend, self).write_initial_setup(file)
+        super().write_initial_setup(file)
         self.write_sequences(file)
 
     def dump_schema(self):
@@ -161,7 +160,7 @@ class PostgreSQLBackend(BaseBackend):
             query = BASE_RELATIONS_QUERY
             kwargs = {}
         self._related_data = self.run(query, kwargs)  # pylint: disable=attribute-defined-outside-init
-        super(PostgreSQLBackend, self).add_related_data(full_tables, partial_tables)
+        super().add_related_data(full_tables, partial_tables)
 
     def get_foreign_keys(self, table, full_tables=(), recursive=False):
         # NOTE, `full_tables` is not used, because it is filtered in `BASE_RELATIONS_QUERY`
@@ -181,28 +180,28 @@ class PostgreSQLBackend(BaseBackend):
     def export_to_csv(self, sql):
         """Exports the result of the given sql to CSV with a help of COPY statement."""
         with BytesIO() as output:
-            self.copy_expert("COPY ({0}) TO STDOUT WITH CSV HEADER".format(sql), output)
+            self.copy_expert(f"COPY ({sql}) TO STDOUT WITH CSV HEADER", output)
             return output.getvalue()
 
     def get_search_path(self):
         return self.run("show search_path;")[0]["search_path"]
 
     def restore_search_path(self, search_path):
-        self.run("SELECT pg_catalog.set_config('search_path', '{0}', false);".format(search_path))
+        self.run(f"SELECT pg_catalog.set_config('search_path', '{search_path}', false);")
 
     def run_setup_file(self, sql):
         return super().run_setup_file(PSQL_RESTRICT_RE.sub(b"", sql))
 
     def initial_setup(self, archive):
         search_path = self.get_search_path()
-        super(PostgreSQLBackend, self).initial_setup(archive)
+        super().initial_setup(archive)
         self.restore_search_path(search_path)
 
     def recreate_database(self, owner=None):
         if owner is None:
             owner = self.user
         self.drop_connections(self.dbname)
-        super(PostgreSQLBackend, self).recreate_database(owner)
+        super().recreate_database(owner)
 
     def drop_connections(self, dbname):
         self.run(
@@ -212,17 +211,17 @@ class PostgreSQLBackend(BaseBackend):
         )
 
     def drop_database(self, dbname):
-        self.run("DROP DATABASE IF EXISTS {0}".format(dbname), using="maintenance")
+        self.run(f"DROP DATABASE IF EXISTS {dbname}", using="maintenance")
 
     def create_database(self, dbname, owner):
         self.run(
-            "CREATE DATABASE {0} WITH OWNER {1}".format(dbname, owner),
+            f"CREATE DATABASE {dbname} WITH OWNER {owner}",
             using="maintenance",
         )
 
     def truncate(self):
         tables = [row["relname"] for row in self.run(TABLES_SQL)]
-        self.run("TRUNCATE TABLE {0} RESTART IDENTITY CASCADE".format(", ".join(tables)))
+        self.run("TRUNCATE TABLE {} RESTART IDENTITY CASCADE".format(", ".join(tables)))
 
     def load_data_file(self, table_name, fd):
-        self.copy_expert("COPY {0} FROM STDIN WITH CSV HEADER".format(table_name), fd)
+        self.copy_expert(f"COPY {table_name} FROM STDIN WITH CSV HEADER", fd)

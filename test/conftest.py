@@ -110,7 +110,7 @@ class BackendWrapper:
 
     def assert_schema(self, schema):
         for table in ("groups", "employees", "tickets"):
-            assert "CREATE TABLE {0}".format(table).encode() in schema
+            assert f"CREATE TABLE {table}".encode() in schema
 
     def assert_dump(self, archive_filename):
         archive = zipfile.ZipFile(archive_filename)
@@ -121,7 +121,7 @@ class BackendWrapper:
         self.assert_schema(schema)
 
     def assert_content(self, archive, table, expected):
-        rows = set(archive.read("dump/data/{}.csv".format(table)).split(b"\n"))
+        rows = set(archive.read(f"dump/data/{table}.csv").split(b"\n"))
         rows.remove(b"")
         assert rows == expected
 
@@ -151,10 +151,7 @@ class PostgreSQLWrapper(BackendWrapper):
         return self._is_search_path_fixed
 
     def assert_schema(self, schema):
-        if self.is_search_path_fixed:
-            template = "CREATE TABLE public.{0}"
-        else:
-            template = "CREATE TABLE {0}"
+        template = "CREATE TABLE public.{0}" if self.is_search_path_fixed else "CREATE TABLE {0}"
         for table in ("groups", "employees", "tickets"):
             assert template.format(table).encode() in schema
 
@@ -207,7 +204,7 @@ class SQLiteWrapper(BackendWrapper):
         return str(tmpdir.join("test_xxx.db"))
 
     def _get_concurrent_insert_class(self, query):
-        base_class = super(SQLiteWrapper, self)._get_concurrent_insert_class(query)
+        base_class = super()._get_concurrent_insert_class(query)
 
         class ConcurrentInsertEmulator(base_class):
             def _insert(self):
@@ -241,9 +238,10 @@ def backend(request):
 
 @pytest.fixture
 def db_helper(request, backend):
-    return {"postgres": PostgreSQLWrapper, "sqlite": SQLiteWrapper,}[
-        DATABASE
-    ](backend=backend, request=request)
+    return {
+        "postgres": PostgreSQLWrapper,
+        "sqlite": SQLiteWrapper,
+    }[DATABASE](backend=backend, request=request)
 
 
 @pytest.fixture
@@ -291,7 +289,7 @@ def data(execute_file):
 
 def pytest_runtest_setup(item):
     if isinstance(item, pytest.Function) and not item.get_closest_marker(DATABASE) and ALL.intersection(item.keywords):
-        pytest.skip("Cannot run on {0}".format(DATABASE))
+        pytest.skip(f"Cannot run on {DATABASE}")
 
 
 @pytest.fixture

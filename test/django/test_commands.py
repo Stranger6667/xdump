@@ -1,4 +1,4 @@
-# coding: utf-8
+import contextlib
 import sqlite3
 import zipfile
 
@@ -114,10 +114,8 @@ def test_truncate_load(backend, archive_filename, db_helper):
         dump_schema=False,
     )
 
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         backend.run("COMMIT")
-    except sqlite3.OperationalError:
-        pass
 
     call_command("xload", archive_filename, cleanup_method="truncate")
 

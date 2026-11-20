@@ -1,4 +1,3 @@
-# coding: utf-8
 from dataclasses import fields
 
 from django.conf import settings

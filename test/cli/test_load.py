@@ -1,3 +1,4 @@
+import contextlib
 import sqlite3
 
 import pytest
@@ -27,10 +28,8 @@ def test_load(backend, cli, archive_filename, db_helper):
 @pytest.mark.usefixtures("schema", "data")
 def test_cleanup_methods(cli, archive_filename, backend, cleanup_method, dump_kwargs):
     backend.dump(archive_filename, ["groups"], {"employees": EMPLOYEES_SQL}, **dump_kwargs)
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         backend.run("COMMIT")
-    except sqlite3.OperationalError:
-        pass
     result = cli.load("-i", archive_filename, "-m", cleanup_method)
     assert not result.exception
     # The CLI uses its own connections; the recreated database is not visible through the old ones

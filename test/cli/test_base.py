@@ -9,4 +9,4 @@ def test_xdump_run(cli_runner, command, name):
     """Smoke test for a click group."""
     result = cli_runner.invoke(command, ("--version",))
     assert not result.exception
-    assert result.output == "{0}, version {1}\n".format(name, __version__)
+    assert result.output == f"{name}, version {__version__}\n"

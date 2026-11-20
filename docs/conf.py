@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # XDump documentation build configuration file, created by
 # sphinx-quickstart on Sun Jan  7 21:55:36 2018.
@@ -53,7 +52,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "XDump"
-copyright = "%s, Dmitry Dygalo" % date.today().year
+copyright = f"{date.today().year}, Dmitry Dygalo"
 author = "Dmitry Dygalo"
 
 # The version info for the project you're documenting, acts as replacement for

@@ -23,7 +23,7 @@ def parse_partial(ctx, param, value):
             raise click.exceptions.BadParameter(
                 'partial table specification should be in the following format: "table:select SQL"',
                 param=param,
-            )
+            ) from None
 
     return dict(parse_value(partial) for partial in value)
 
@@ -77,7 +77,7 @@ def base_dump(backend_path, output, full, partial, compression, schema, data, **
     compression = COMPRESSION_MAPPING[compression]
 
     click.echo("Dumping ...")
-    click.echo("Output file: {0}".format(output))
+    click.echo(f"Output file: {output}")
 
     backend = init_backend(backend_path, **kwargs)
     try:
