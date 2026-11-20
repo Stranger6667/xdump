@@ -1,50 +1,69 @@
 name: build
 
 on:
-  pull_request:
-    paths:
-      - '**.py'
-      - '.github/workflows/*.yml'
-      - '.pylintrc'
-      - '.pre-commit-config.yaml'
-      - '.pydocstyle'
-      - '.relint.yml'
-      - '.yamllint'
-      - 'poetry.lock'
-      - 'pyproject.toml'
-      - 'tox.ini'
-      - 'mypy.ini'
+  pull_request: ~
   push:
     branches:
       - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
-  pre-commit:
-    name: Generic pre-commit checks
-    runs-on: ubuntu-latest
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-24.04, python: "3.11", tox-env: py311-sqlite }
+          - { os: ubuntu-24.04, python: "3.11", tox-env: py311-postgres }
+          - { os: ubuntu-24.04, python: "3.12", tox-env: py312-sqlite }
+          - { os: ubuntu-24.04, python: "3.12", tox-env: py312-postgres }
+          - { os: ubuntu-24.04, python: "3.13", tox-env: py313-sqlite }
+          - { os: ubuntu-24.04, python: "3.13", tox-env: py313-postgres }
+          - { os: ubuntu-24.04, python: "3.14", tox-env: py314-sqlite }
+          - { os: ubuntu-24.04, python: "3.14", tox-env: py314-postgres }
+          - { os: ubuntu-24.04, python: "3.15", tox-env: py315-sqlite }
+          - { os: ubuntu-24.04, python: "3.15", tox-env: py315-postgres }
+          - { os: ubuntu-24.04, python: "pypy3.11", tox-env: pypy311-sqlite }
+          - { os: ubuntu-24.04, python: "pypy3.11", tox-env: pypy311-postgres }
+          - { os: windows-latest, python: "3.14", tox-env: py314-sqlite }
+
+    name: ${{ matrix.tox-env }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 1
 
-      - uses: actions/setup-python@v1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: 3.7
+          python-version: ${{ matrix.python }}
+          allow-prereleases: true
 
-      - run: pip install pre-commit
-      - run: SKIP=pylint,mypy pre-commit run --all-files
+      - name: Add PostgreSQL binaries to PATH
+        if: endsWith(matrix.tox-env, '-postgres')
+        run: pg_config --bindir >> "$GITHUB_PATH"
 
-  pylint:
-    name: Pylint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - run: uvx --from tox --with tox-uv tox -e "$TOX_ENV"
+        env:
+          TOX_ENV: ${{ matrix.tox-env }}
+
+      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
-          fetch-depth: 1
-
-      - uses: actions/setup-python@v2
-        with:
-          python-version: 3.7
-
-      - run: pip install pre-commit
-      - run: pre-commit run pylint --all-files
+          files: coverage.xml
+          name: ${{ matrix.tox-env }}-${{ matrix.os }}
+          token: ${{ secrets.CODECOV_TOKEN }}
