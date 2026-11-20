@@ -9,7 +9,8 @@
 
 ### Changed
 
-- Minimum supported versions: `click` 8.0, `psycopg2` 2.9.5 and `Django` 4.2.
+- Use `psycopg` 3 instead of `psycopg2`. `libpq` is loaded at runtime, so installing XDump no longer needs `pg_config` and a C compiler.
+- Minimum supported versions: `click` 8.2, `psycopg` 3.2 and `Django` 5.2.
 - `cache_clear` closes the backend's open connections and no longer affects other backend instances.
 
 ### Fixed
@@ -23,7 +24,7 @@
 
 - Support for Python 2.7, 3.4–3.10 and PyPy 2.
 - Dependency on `attrs`. Backends are dataclasses now.
-- PostgreSQL backend on PyPy, as `psycopg2` does not support it.
+- `PostgreSQLBackend.copy_expert` and `handle_run_exception` methods.
 
 ## [0.6.0](https://github.com/Stranger6667/xdump/compare/0.5.0...0.6.0) - 2018-08-11
 

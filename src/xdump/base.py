@@ -87,15 +87,11 @@ class BaseBackend:
         with self.log_query(sql, params):
             cursor = self.get_cursor(using)
             cursor.execute(sql, params)
-            try:
-                rows: list[Row] = cursor.fetchall()
-                return rows
-            except Exception as exc:
-                self.handle_run_exception(exc)
+            if cursor.description is None:
+                # The statement returns no rows, e.g. `BEGIN` or `INSERT`
                 return []
-
-    def handle_run_exception(self, exc: Exception) -> None:
-        raise NotImplementedError
+            rows: list[Row] = cursor.fetchall()
+            return rows
 
     @contextmanager
     def transaction(self) -> Iterator[None]:

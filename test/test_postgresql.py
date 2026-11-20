@@ -1,5 +1,6 @@
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
+import psycopg
 import pytest
 
 from .conftest import is_search_path_fixed
@@ -13,14 +14,13 @@ def test_write_sequences(backend, archive, db_helper):
     db_helper.assert_unused_sequences(archive)
 
 
-def test_handling_error(backend):
-    import psycopg2
+def test_statement_without_rows(backend):
+    assert backend.run("BEGIN") == []
 
-    with (
-        patch("psycopg2.extras.DictCursorBase.fetchall", side_effect=psycopg2.ProgrammingError),
-        pytest.raises(psycopg2.ProgrammingError),
-    ):
-        backend.run("BEGIN")
+
+def test_handling_error(backend):
+    with pytest.raises(psycopg.errors.UndefinedTable):
+        backend.run("SELECT * FROM unknown")
 
 
 @pytest.mark.parametrize(
@@ -79,5 +79,5 @@ def test_run_dump_environment_empty_password(backend):
     ),
 )
 def test_postgres_version(version, is_fixed):
-    mocked_connection = Mock(server_version=version)
+    mocked_connection = Mock(info=Mock(server_version=version))
     assert is_search_path_fixed(mocked_connection) == is_fixed

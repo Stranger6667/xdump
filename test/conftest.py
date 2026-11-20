@@ -37,7 +37,7 @@ def is_search_path_fixed(connection):
 
     Ref: CVE-2018-1058.
     """
-    version = connection.server_version
+    version = connection.info.server_version
     return (
         version >= 100003
         or 90608 <= version < 100000

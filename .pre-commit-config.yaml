@@ -49,8 +49,8 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        # Dependencies come with their types; `psycopg2` is replaced by its stubs, as building it needs `pg_config`.
-        entry: uvx --python 3.11 --with click --with django-stubs --with types-psycopg2 mypy==2.4.0
+        # Installs the project with its dependencies, so third-party types are checked.
+        entry: uvx --python 3.11 --with-editable=. --with django-stubs mypy==2.4.0
         language: system
         types_or: [python, pyi]
         require_serial: true
