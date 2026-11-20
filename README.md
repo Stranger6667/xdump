@@ -198,4 +198,4 @@ $ make sync-production TARGET=john@production.com PYTHON=/path/to/python/in/venv
 
 ## Python support
 
-XDump supports Python 3.11–3.15. On PyPy only the SQLite backend works, as `psycopg2` does not support PyPy.
+XDump supports Python 3.11–3.15 and PyPy.

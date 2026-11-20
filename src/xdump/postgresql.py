@@ -4,17 +4,16 @@ import subprocess
 import zipfile
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
-from io import BytesIO
 from typing import IO, Any
 
-import psycopg2
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT, ISOLATION_LEVEL_REPEATABLE_READ
-from psycopg2.extras import RealDictConnection
+import psycopg
+from psycopg.rows import dict_row
 
 from .base import BaseBackend, ForeignKey
 from .utils import make_options
 
 TABLES_SQL = "SELECT relname FROM pg_class WHERE relkind = 'r' AND relnamespace = 'public'::regnamespace"
+COPY_CHUNK_SIZE = 64 * 1024
 SEQUENCES_SQL = "SELECT relname FROM pg_class WHERE relkind = 'S'"
 # `pg_dump` from PostgreSQL 13.22 / 14.19 / 15.14 / 16.10 / 17.6 wraps its output in `\restrict` / `\unrestrict` psql
 # meta-commands (CVE-2025-8714). They are not SQL, and the server rejects them.
@@ -80,11 +79,11 @@ class PostgreSQLBackend(BaseBackend):
     initial_setup_files = BaseBackend.initial_setup_files + (sequences_filename,)
     connections = {
         "default": {
-            "isolation_level": ISOLATION_LEVEL_REPEATABLE_READ,
+            "isolation_level": psycopg.IsolationLevel.REPEATABLE_READ,
         },
         "maintenance": {
             "dbname": "postgres",
-            "isolation_level": ISOLATION_LEVEL_AUTOCOMMIT,
+            "autocommit": True,
         },
     }
 
@@ -92,19 +91,11 @@ class PostgreSQLBackend(BaseBackend):
         self.port = str(self.port)
         self.verbosity = int(self.verbosity)
 
-    def connect(self, **kwargs: Any) -> Any:
-        isolation_level = kwargs.pop("isolation_level")
-        connection = psycopg2.connect(**self.get_connection_kwargs(**kwargs))
-        connection.set_isolation_level(isolation_level)
+    def connect(self, **kwargs: Any) -> psycopg.Connection[dict[str, Any]]:
+        isolation_level = kwargs.pop("isolation_level", None)
+        connection = psycopg.connect(row_factory=dict_row, **self.get_connection_kwargs(**kwargs))
+        connection.isolation_level = isolation_level
         return connection
-
-    def get_connection_kwargs(self, **kwargs: Any) -> dict[str, Any]:
-        return super().get_connection_kwargs(connection_factory=RealDictConnection, **kwargs)
-
-    def handle_run_exception(self, exc: Exception) -> None:
-        """Suppress exception when there is nothing to fetch."""
-        if str(exc) != "no results to fetch":
-            raise exc
 
     @property
     def run_dump_environment(self) -> dict[str, str]:
@@ -177,16 +168,11 @@ class PostgreSQLBackend(BaseBackend):
                     continue
                 yield foreign_key
 
-    def copy_expert(self, sql: str, file: IO[bytes], **kwargs: Any) -> None:
-        with self.log_query(sql):
-            cursor = self.get_cursor()
-            cursor.copy_expert(sql, file, **kwargs)
-
     def export_to_csv(self, sql: str) -> bytes:
         """Exports the result of the given sql to CSV with a help of COPY statement."""
-        with BytesIO() as output:
-            self.copy_expert(f"COPY ({sql}) TO STDOUT WITH CSV HEADER", output)
-            return output.getvalue()
+        query = f"COPY ({sql}) TO STDOUT WITH CSV HEADER"
+        with self.log_query(query), self.get_cursor().copy(query) as copy:
+            return b"".join(copy)
 
     def get_search_path(self) -> str:
         search_path: str = self.run("show search_path;")[0]["search_path"]
@@ -230,4 +216,7 @@ class PostgreSQLBackend(BaseBackend):
         self.run("TRUNCATE TABLE {} RESTART IDENTITY CASCADE".format(", ".join(tables)))
 
     def load_data_file(self, table_name: str, fd: IO[bytes]) -> None:
-        self.copy_expert(f"COPY {table_name} FROM STDIN WITH CSV HEADER", fd)
+        query = f"COPY {table_name} FROM STDIN WITH CSV HEADER"
+        with self.log_query(query), self.get_cursor().copy(query) as copy:
+            while data := fd.read(COPY_CHUNK_SIZE):
+                copy.write(data)

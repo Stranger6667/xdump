@@ -15,6 +15,8 @@ def test_load(backend, cli, archive_filename, db_helper):
     assert db_helper.get_tables_count() == 0
     result = cli.load("-i", archive_filename)
     assert not result.exception
+    # The CLI uses its own connections; the loaded data is not visible in the snapshot of the old ones
+    backend.cache_clear()
     assert db_helper.get_tables_count() == 3
 
 

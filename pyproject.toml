@@ -27,16 +27,16 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
   "Typing :: Typed",
 ]
-dependencies = ["click>=8", "psycopg2>=2.9.5"]
+dependencies = ["click>=8.2", "psycopg>=3.2"]
 
 [project.optional-dependencies]
-django = ["django>=4.2"]
+django = ["django>=5.2"]
 tests = [
-  "coverage[toml]>=7.2",
-  "django>=4.2",
-  "pytest>=8",
-  "pytest-click>=1.1",
-  "pytest-django>=4.5",
+  "coverage[toml]>=7.10",
+  "django>=5.2",
+  "pytest>=9",
+  "pytest-click>=2",
+  "pytest-django>=4.11",
   "pytest-postgresql>=9",
 ]
 
